@@ -131,3 +131,4 @@ agent/obj/
 server/data/
 *.db
 *.sqlite 
+*.md
