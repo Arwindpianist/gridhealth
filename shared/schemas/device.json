@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Device",
+  "description": "GridHealth device schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique device identifier"
+    },
+    "organizationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Organization this device belongs to"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Device name/identifier"
+    },
+    "fingerprint": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Unique device fingerprint"
+    },
+    "authKey": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9]+$",
+      "description": "Device authentication key"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["online", "offline", "error"],
+      "description": "Current device status"
+    },
+    "lastCheckIn": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last device check-in timestamp"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Device registration timestamp"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last update timestamp"
+    }
+  },
+  "required": ["organizationId", "name", "fingerprint", "status"],
+  "additionalProperties": false
+} 

@@ -1,0 +1,41 @@
+{
+  "name": "gridhealth",
+  "version": "1.0.0",
+  "description": "Enterprise system health monitoring solution with C# agent, Express server, and Next.js dashboard",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:dashboard\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:dashboard": "cd dashboard && npm run dev",
+    "build": "npm run build:shared && npm run build:server && npm run build:dashboard",
+    "build:shared": "cd shared && npm run build",
+    "build:server": "cd server && npm run build",
+    "build:dashboard": "cd dashboard && npm run build",
+    "test": "npm run test:shared && npm run test:server && npm run test:dashboard",
+    "test:shared": "cd shared && npm run test",
+    "test:server": "cd server && npm run test",
+    "test:dashboard": "cd dashboard && npm run test",
+    "lint": "npm run lint:shared && npm run lint:server && npm run lint:dashboard",
+    "lint:shared": "cd shared && npm run lint",
+    "lint:server": "cd server && npm run lint",
+    "lint:dashboard": "cd dashboard && npm run lint",
+    "clean": "npm run clean:shared && npm run clean:server && npm run clean:dashboard",
+    "clean:shared": "cd shared && npm run clean",
+    "clean:server": "cd server && npm run clean",
+    "clean:dashboard": "cd dashboard && npm run clean",
+    "agent:build": "cd agent && dotnet build",
+    "agent:run": "cd agent && dotnet run",
+    "agent:test": "cd agent && dotnet test",
+    "agent:clean": "cd agent && dotnet clean",
+    "install:all": "npm install && cd shared && npm install && cd ../server && npm install && cd ../dashboard && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+} 

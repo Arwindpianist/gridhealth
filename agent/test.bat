@@ -1,0 +1,6 @@
+@echo off
+echo Testing console output...
+echo Current time: %time%
+echo Press any key to continue...
+pause
+echo Test completed! 

@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Health Metrics",
+  "description": "GridHealth system health metrics schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique metrics record identifier"
+    },
+    "deviceId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Device this metrics belongs to"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Metrics collection timestamp"
+    },
+    "cpu": {
+      "type": "object",
+      "properties": {
+        "usage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "CPU usage percentage"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "description": "CPU temperature in Celsius"
+        }
+      },
+      "required": ["usage"],
+      "additionalProperties": false
+    },
+    "memory": {
+      "type": "object",
+      "properties": {
+        "usage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Memory usage percentage"
+        },
+        "available": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Available memory in MB"
+        },
+        "total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total memory in MB"
+        }
+      },
+      "required": ["usage", "available", "total"],
+      "additionalProperties": false
+    },
+    "disk": {
+      "type": "object",
+      "properties": {
+        "usage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Disk usage percentage"
+        },
+        "available": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Available disk space in GB"
+        },
+        "total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total disk space in GB"
+        }
+      },
+      "required": ["usage", "available", "total"],
+      "additionalProperties": false
+    },
+    "network": {
+      "type": "object",
+      "properties": {
+        "bytesIn": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Bytes received"
+        },
+        "bytesOut": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Bytes sent"
+        },
+        "connections": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Active network connections"
+        }
+      },
+      "required": ["bytesIn", "bytesOut", "connections"],
+      "additionalProperties": false
+    },
+    "uptime": {
+      "type": "number",
+      "minimum": 0,
+      "description": "System uptime in seconds"
+    },
+    "software": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of installed software"
+    }
+  },
+  "required": ["deviceId", "timestamp", "cpu", "memory", "disk", "network", "uptime"],
+  "additionalProperties": false
+} 

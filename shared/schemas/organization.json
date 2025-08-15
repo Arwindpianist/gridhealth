@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Organization",
+  "description": "GridHealth organization schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique organization identifier"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Organization name"
+    },
+    "primaryContact": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Primary contact person name"
+    },
+    "contactEmail": {
+      "type": "string",
+      "format": "email",
+      "description": "Primary contact email address"
+    },
+    "enrollmentToken": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9]+$",
+      "description": "Secure enrollment token for device registration"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Organization creation timestamp"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last update timestamp"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true,
+      "description": "Organization active status"
+    }
+  },
+  "required": ["name", "primaryContact", "contactEmail"],
+  "additionalProperties": false
+} 
