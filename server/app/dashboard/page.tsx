@@ -1,12 +1,20 @@
 import React from 'react'
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
+import { checkOnboardingStatus } from '../../lib/onboarding'
 
 export default async function DashboardPage() {
   const { userId } = await auth()
   
   if (!userId) {
     redirect('/')
+  }
+
+  // Check if user needs to complete onboarding
+  const onboardingStatus = await checkOnboardingStatus(userId)
+  
+  if (onboardingStatus.needsOnboarding) {
+    redirect('/onboarding')
   }
 
   return (

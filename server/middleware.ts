@@ -1,6 +1,13 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-export default clerkMiddleware();
+const isOnboardingRoute = createRouteMatcher(['/onboarding(.*)']);
+
+export default clerkMiddleware((auth, req) => {
+  // Allow access to onboarding route for authenticated users
+  if (isOnboardingRoute(req)) {
+    return;
+  }
+});
 
 export const config = {
   matcher: [

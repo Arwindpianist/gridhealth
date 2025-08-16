@@ -3,9 +3,11 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+import { useOnboarding } from '../hooks/useOnboarding'
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { needsOnboarding, isLoading } = useOnboarding()
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-dark-900/95 backdrop-blur-md border-b border-dark-700/50 shadow-2xl">
@@ -52,15 +54,26 @@ export default function Header() {
             </SignedOut>
             
             <SignedIn>
-              <UserButton 
-                appearance={{
-                  elements: {
-                    avatarBox: "w-10 h-10",
-                    userButtonPopoverCard: "bg-dark-800 border-dark-700",
-                    userButtonPopoverActionButton: "text-gray-300 hover:text-white hover:bg-dark-700"
-                  }
-                }}
-              />
+              {!isLoading && needsOnboarding ? (
+                <Link href="/onboarding" className="btn-primary px-6 py-2">
+                  Complete Setup
+                </Link>
+              ) : (
+                <>
+                  <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors duration-200">
+                    Dashboard
+                  </Link>
+                  <UserButton 
+                    appearance={{
+                      elements: {
+                        avatarBox: "w-10 h-10",
+                        userButtonPopoverCard: "bg-dark-800 border-dark-700",
+                        userButtonPopoverActionButton: "text-gray-300 hover:text-white hover:bg-dark-700"
+                      }
+                    }}
+                  />
+                </>
+              )}
             </SignedIn>
           </nav>
 
@@ -108,17 +121,28 @@ export default function Header() {
               </SignedOut>
               
               <SignedIn>
-                <div className="flex justify-center">
-                  <UserButton 
-                    appearance={{
-                      elements: {
-                        avatarBox: "w-12 h-12",
-                        userButtonPopoverCard: "bg-dark-800 border-dark-700",
-                        userButtonPopoverActionButton: "text-gray-300 hover:text-white hover:bg-dark-700"
-                      }
-                    }}
-                  />
-                </div>
+                {!isLoading && needsOnboarding ? (
+                  <Link href="/onboarding" className="btn-primary w-full text-center py-3">
+                    Complete Setup
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors duration-200 py-2">
+                      Dashboard
+                    </Link>
+                    <div className="flex justify-center">
+                      <UserButton 
+                        appearance={{
+                          elements: {
+                            avatarBox: "w-12 h-12",
+                            userButtonPopoverCard: "bg-dark-800 border-dark-700",
+                            userButtonPopoverActionButton: "text-gray-300 hover:text-white hover:bg-dark-700"
+                          }
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
               </SignedIn>
             </nav>
           </div>
