@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
 async function handleUserCreated(userData: any) {
   try {
     console.log('👤 Creating user in Supabase:', userData.id)
+    console.log('📅 Clerk created_at value:', userData.created_at, 'Type:', typeof userData.created_at)
 
     // Extract user information from Clerk
     const {
@@ -74,7 +75,7 @@ async function handleUserCreated(userData: any) {
         first_name: first_name || null,
         last_name: last_name || null,
         phone: primaryPhone || null,
-        created_at: new Date(created_at * 1000).toISOString()
+        created_at: new Date().toISOString() // Use current timestamp instead of Clerk's
       })
       .select()
       .single()
@@ -119,7 +120,7 @@ async function handleUserUpdated(userData: any) {
         first_name: first_name || null,
         last_name: last_name || null,
         phone: primaryPhone || null,
-        updated_at: new Date(updated_at * 1000).toISOString()
+        updated_at: new Date().toISOString() // Use current timestamp instead of Clerk's
       })
       .eq('clerk_user_id', clerkUserId)
 
@@ -133,7 +134,7 @@ async function handleUserUpdated(userData: any) {
   } catch (error) {
     console.error('❌ Error handling user update:', error)
     throw error
-  }
+    }
 }
 
 async function handleUserDeleted(userData: any) {
