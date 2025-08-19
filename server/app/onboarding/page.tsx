@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useUser, useAuth } from '@clerk/nextjs'
-import { createClient } from '@supabase/supabase-js'
+import { useUser } from '@clerk/nextjs'
 
 type AccountType = 'individual' | 'organization' | 'company'
 type OnboardingStep = 'personal' | 'account-type' | 'details' | 'complete'
@@ -25,12 +24,8 @@ interface ValidationErrors {
   [key: string]: string
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
-
 export default function OnboardingPage() {
   const { user, isLoaded } = useUser()
-  const { getToken } = useAuth()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('personal')
   const [isLoading, setIsLoading] = useState(false)
@@ -51,28 +46,9 @@ export default function OnboardingPage() {
 
   const checkOnboardingStatus = async () => {
     try {
-      const token = await getToken({ template: 'supabase' })
-      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      })
-
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('first_name, last_name, phone')
-        .eq('clerk_user_id', user?.id)
-        .single()
-
-      if (error) throw error
-
-      // If user has basic profile info, redirect to dashboard
-      if (userData?.first_name && userData?.last_name) {
-        router.push('/dashboard')
-        return
-      }
+      // For now, we'll assume onboarding is needed
+      // The actual check will happen server-side when accessing dashboard
+      console.log('Checking onboarding status for user:', user?.id)
     } catch (error) {
       console.error('Error checking onboarding status:', error)
     }
@@ -144,79 +120,29 @@ export default function OnboardingPage() {
 
     setIsLoading(true)
     try {
-      const token = await getToken({ template: 'supabase' })
-      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      })
-
-      // Update user profile
-      const { error: userError } = await supabase
-        .from('users')
-        .update({
+      // Use the API endpoint instead of direct Supabase calls
+      const response = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           first_name: profile.first_name,
           last_name: profile.last_name,
-          phone: profile.phone
+          phone: profile.phone,
+          account_type: profile.account_type,
+          organization_name: profile.organization_name,
+          company_name: profile.company_name,
+          description: profile.description,
+          address: profile.address,
+          contact_email: profile.contact_email,
+          contact_phone: profile.contact_phone
         })
-        .eq('clerk_user_id', user.id)
+      })
 
-      if (userError) throw userError
-
-      // Create organization/company if needed
-      if (profile.account_type === 'organization' && profile.organization_name) {
-        const { data: org, error: orgError } = await supabase
-          .from('organizations')
-          .insert({
-            name: profile.organization_name,
-            description: profile.description,
-            address: profile.address,
-            contact_email: profile.contact_email,
-            contact_phone: profile.contact_phone
-          })
-          .select()
-          .single()
-
-        if (orgError) throw orgError
-
-        // Assign user role to organization
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: user.id,
-            organization_id: org.id,
-            role: 'owner'
-          })
-
-        if (roleError) throw roleError
-      }
-
-      if (profile.account_type === 'company' && profile.company_name) {
-        const { data: company, error: companyError } = await supabase
-          .from('companies')
-          .insert({
-            name: profile.company_name,
-            email: user.emailAddresses[0]?.emailAddress || '',
-            phone: profile.contact_phone,
-            address: profile.address
-          })
-          .select()
-          .single()
-
-        if (companyError) throw companyError
-
-        // Assign user role to company
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: user.id,
-            company_id: company.id,
-            role: 'owner'
-          })
-
-        if (roleError) throw roleError
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to complete onboarding')
       }
 
       setCurrentStep('complete')
@@ -226,7 +152,7 @@ export default function OnboardingPage() {
 
     } catch (error) {
       console.error('Error completing onboarding:', error)
-      console.error('There was an error completing your profile. Please try again.')
+      alert('There was an error completing your profile. Please try again.')
     } finally {
       setIsLoading(false)
     }

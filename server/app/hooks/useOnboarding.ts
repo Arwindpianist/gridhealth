@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useUser, useAuth } from '@clerk/nextjs'
+import { useUser } from '@clerk/nextjs'
 import { checkOnboardingStatus, OnboardingStatus } from '../../lib/onboarding'
 
 export function useOnboarding() {
   const { user, isLoaded } = useUser()
-  const { getToken } = useAuth()
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus>({
     needsOnboarding: false,
     isComplete: false,
@@ -24,8 +23,7 @@ export function useOnboarding() {
     if (user) {
       try {
         setIsLoading(true)
-        const token = await getToken({ template: 'supabase' })
-        const status = await checkOnboardingStatus(user.id, token || undefined)
+        const status = await checkOnboardingStatus(user.id)
         setOnboardingStatus(status)
       } catch (error) {
         console.error('Error checking onboarding status:', error)
