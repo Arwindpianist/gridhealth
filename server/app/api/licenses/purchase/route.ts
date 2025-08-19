@@ -32,23 +32,88 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get user's organization
+    // Get user's role and organization info
     const { data: userRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
-      .select('organization_id')
+      .select('organization_id, company_id, role')
       .eq('user_id', userId)
       .single()
 
-    if (roleError || !userRole?.organization_id) {
+    if (roleError) {
       console.error('❌ User role not found:', roleError)
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+      return NextResponse.json({ error: 'User role not found' }, { status: 404 })
+    }
+
+    // Handle individual users
+    if (userRole.role === 'individual') {
+      console.log('👤 Individual user purchasing license')
+      
+      // For individual users, create a virtual organization for billing
+      const { data: virtualOrg, error: orgError } = await supabaseAdmin
+        .from('organizations')
+        .insert({
+          name: `Individual-${user.email}`,
+          description: 'Individual user account',
+          contact_email: user.email
+        })
+        .select()
+        .single()
+
+      if (orgError) {
+        console.error('❌ Error creating virtual organization:', orgError)
+        return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 })
+      }
+
+      // Update user role to link to virtual organization
+      await supabaseAdmin
+        .from('user_roles')
+        .update({ organization_id: virtualOrg.id })
+        .eq('user_id', userId)
+
+      // Check if virtual organization already has an active license
+      const { data: existingLicense, error: licenseCheckError } = await supabaseAdmin
+        .from('licenses')
+        .select('id, status')
+        .eq('organization_id', virtualOrg.id)
+        .eq('status', 'active')
+        .single()
+
+      if (existingLicense) {
+        console.log('⚠️ Individual user already has active license:', existingLicense.id)
+        return NextResponse.json({ 
+          error: 'You already have an active license',
+          existingLicense: existingLicense.id
+        }, { status: 400 })
+      }
+
+      // Create Stripe checkout session for individual user
+      const session = await createLicenseCheckoutSession(
+        user.email,
+        virtualOrg.id,
+        tier
+      )
+
+      console.log('✅ Checkout session created for individual user:', session.id)
+
+      return NextResponse.json({
+        success: true,
+        sessionId: session.id,
+        checkoutUrl: session.url
+      })
+    }
+
+    // Handle organization/company users
+    const organizationId = userRole.organization_id || userRole.company_id
+    if (!organizationId) {
+      console.error('❌ No organization or company found for user')
+      return NextResponse.json({ error: 'Organization or company not found' }, { status: 404 })
     }
 
     // Check if organization already has an active license
     const { data: existingLicense, error: licenseCheckError } = await supabaseAdmin
       .from('licenses')
       .select('id, status')
-      .eq('organization_id', userRole.organization_id)
+      .eq('organization_id', organizationId)
       .eq('status', 'active')
       .single()
 
@@ -63,7 +128,7 @@ export async function POST(request: NextRequest) {
     // Create Stripe checkout session
     const session = await createLicenseCheckoutSession(
       user.email,
-      userRole.organization_id,
+      organizationId,
       tier
     )
 

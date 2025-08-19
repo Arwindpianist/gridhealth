@@ -132,6 +132,8 @@ export default function OnboardingPage() {
 
     setIsLoading(true)
     try {
+      console.log('🚀 Starting onboarding completion...', profile)
+      
       // Use the API endpoint instead of direct Supabase calls
       const response = await fetch('/api/onboarding', {
         method: 'POST',
@@ -152,10 +154,16 @@ export default function OnboardingPage() {
         })
       })
 
+      console.log('📡 API Response status:', response.status)
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('❌ API Error:', errorData)
         throw new Error(errorData.error || 'Failed to complete onboarding')
       }
+
+      const result = await response.json()
+      console.log('✅ Onboarding completed successfully:', result)
 
       setCurrentStep('complete')
       setTimeout(() => {
@@ -163,8 +171,8 @@ export default function OnboardingPage() {
       }, 2000)
 
     } catch (error) {
-      console.error('Error completing onboarding:', error)
-      alert('There was an error completing your profile. Please try again.')
+      console.error('💥 Error completing onboarding:', error)
+      alert(`Onboarding failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please check the console for details and try again.`)
     } finally {
       setIsLoading(false)
     }

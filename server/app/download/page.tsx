@@ -1,257 +1,282 @@
-import React from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+interface License {
+  id: string
+  license_key: string
+  device_limit: number
+  tier: string
+  status: string
+  expires_at: string
+}
+
+interface Organization {
+  id: string
+  name: string
+  subscription_status: string
+}
+
 export default function DownloadPage() {
+  const { user, isLoaded } = useUser()
+  const router = useRouter()
+  const [licenses, setLicenses] = useState<License[]>([])
+  const [organization, setOrganization] = useState<Organization | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedLicense, setSelectedLicense] = useState<License | null>(null)
+  const [showLicenseKey, setShowLicenseKey] = useState(false)
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      fetchUserData()
+    } else if (isLoaded && !user) {
+      router.push('/login')
+    }
+  }, [isLoaded, user, router])
+
+  const fetchUserData = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/licenses')
+      
+      if (response.ok) {
+        const data = await response.json()
+        setLicenses(data.licenses || [])
+        setOrganization(data.organization)
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const downloadAgent = (license: License) => {
+    setSelectedLicense(license)
+    setShowLicenseKey(true)
+  }
+
+  const downloadAgentFile = () => {
+    // Create a simple agent configuration file
+    const config = `# GridHealth Agent Configuration
+# Generated on: ${new Date().toISOString()}
+# License Key: ${selectedLicense?.license_key}
+# Organization: ${organization?.name || 'N/A'}
+
+[Agent]
+Name = GridHealth-Monitoring-Agent
+Version = 1.0.0
+LicenseKey = ${selectedLicense?.license_key}
+OrganizationId = ${organization?.id || 'N/A'}
+
+[Monitoring]
+Interval = 30
+Metrics = CPU,Memory,Disk,Network,Services
+
+[API]
+Endpoint = https://gridhealth.arwindpianist.store/api/metrics
+Timeout = 30
+
+[Logging]
+Level = INFO
+Path = C:\\ProgramData\\GridHealth\\logs
+
+# Installation Instructions:
+# 1. Download the GridHealth-Agent.msi file
+# 2. Run the installer as Administrator
+# 3. Enter the license key when prompted
+# 4. The agent will start monitoring automatically
+
+# For support: support@gridhealth.arwindpianist.store`
+
+    const blob = new Blob([config], { type: 'text/plain' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `gridhealth-agent-config-${selectedLicense?.license_key}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gridhealth-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-dark-900">
       {/* Hero Section */}
-      <section className="relative py-32 overflow-hidden">
+      <section className="relative py-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1),transparent_50%)]"></div>
-        <div className="absolute top-20 left-10 w-72 h-72 bg-gridhealth-600/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary-600/20 rounded-full blur-3xl"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center animate-fade-in">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">
               Download <span className="gradient-text">GridHealth Agent</span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
-              Lightweight, powerful monitoring agent for Windows systems. Monitor your devices in real-time and send health data to your dashboard.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Download Options */}
-      <section className="py-20 bg-dark-800/50 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Individual User */}
-            <div className="card-hover text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-200">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">Individual User</h3>
-              <p className="text-gray-300 mb-6 leading-relaxed">
-                Perfect for personal computers, home servers, or individual workstations. Monitor your own devices with ease.
-              </p>
-              <div className="space-y-3 mb-8">
-                <div className="flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-gray-200">Single device monitoring</span>
-                </div>
-                <div className="flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-gray-200">Personal dashboard</span>
-                </div>
-                <div className="flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-gray-200">Basic alerts</span>
-                </div>
-              </div>
-              <Link href="/signup?type=individual" className="btn-primary w-full">
-                Get Started - Individual
-              </Link>
-            </div>
-
-            {/* Organization */}
-            <div className="card-hover text-center group relative">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <div className="bg-gradient-to-r from-gridhealth-500 to-primary-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  MOST POPULAR
-                </div>
-              </div>
-              <div className="w-20 h-20 bg-gradient-to-br from-gridhealth-500 to-primary-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-200">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">Organization</h3>
-              <p className="text-gray-300 mb-6 leading-relaxed">
-                Ideal for businesses, schools, and organizations. Monitor multiple devices across your network with centralized management.
-              </p>
-              <div className="space-y-3 mb-8">
-                <div className="flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-gray-200">Multi-device monitoring</span>
-                </div>
-                <div className="flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-gray-200">Team dashboards</span>
-                </div>
-                <div className="flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-gray-200">Advanced reporting</span>
-                </div>
-              </div>
-              <Link href="/signup?type=organization" className="btn-primary w-full">
-                Get Started - Organization
-              </Link>
-            </div>
-
-            {/* System Integrator */}
-            <div className="card-hover text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-gridhealth-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-200">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">System Integrator</h3>
-              <p className="text-gray-300 mb-6 leading-relaxed">
-                For IT service providers and system integrators. Manage multiple organizations and provide white-label monitoring services.
-              </p>
-              <div className="space-y-3 mb-8">
-                <div className="flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-gray-200">Multi-organization management</span>
-                </div>
-                <div className="flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-gray-200">White-label solutions</span>
-                </div>
-                <div className="flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-gray-200">Reseller dashboard</span>
-                </div>
-              </div>
-              <Link href="/signup?type=si" className="btn-primary w-full">
-                Get Started - SI
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Technical Details */}
-      <section className="py-20 bg-dark-900 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Technical Specifications
-            </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Lightweight, efficient, and secure monitoring agent designed for enterprise environments.
+              Monitor your systems in real-time with our lightweight, powerful monitoring agent.
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-2 gap-12">
-            <div className="space-y-6">
-              <h3 className="text-2xl font-semibold text-white mb-6">System Requirements</h3>
+
+          {/* License Status */}
+          {organization ? (
+            <div className="card mb-8 text-center">
+              <h2 className="text-2xl font-bold text-white mb-2">{organization.name}</h2>
+              <p className="text-gray-400 mb-4">
+                Status: <span className={`font-semibold ${organization.subscription_status === 'active' ? 'text-green-400' : 'text-red-400'}`}>
+                  {organization.subscription_status.toUpperCase()}
+                </span>
+              </p>
+              {licenses.length > 0 && (
+                <p className="text-gray-300">
+                  Active Licenses: <span className="font-semibold text-gridhealth-400">{licenses.length}</span>
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="card mb-8 text-center">
+              <h2 className="text-2xl font-bold text-white mb-2">Individual Account</h2>
+              <p className="text-gray-400 mb-4">
+                Status: <span className="font-semibold text-green-400">ACTIVE</span>
+              </p>
+              <p className="text-gray-300">
+                You can monitor up to 3 personal devices for free
+              </p>
+            </div>
+          )}
+
+          {/* Download Options */}
+          {licenses.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {licenses.map((license) => (
+                <div key={license.id} className="card text-center">
+                  <div className="text-3xl mb-4">🔑</div>
+                  <h3 className="text-xl font-semibold text-white mb-2">{license.tier.toUpperCase()} License</h3>
+                  <div className="text-2xl font-bold text-gridhealth-400 mb-2">{license.device_limit} Devices</div>
+                  <div className="text-sm text-gray-400 mb-4">
+                    Expires: {new Date(license.expires_at).toLocaleDateString()}
+                  </div>
+                  <button
+                    onClick={() => downloadAgent(license)}
+                    className="btn-primary w-full py-3"
+                  >
+                    📥 Download Agent
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card text-center py-12 mb-12">
+              <div className="text-6xl mb-6">🔒</div>
+              <h2 className="text-2xl font-bold text-white mb-4">No Active Licenses</h2>
+              <p className="text-gray-400 mb-6">
+                {!organization 
+                  ? 'As an individual user, you can download the agent for personal use. Purchase a license to unlock advanced features and monitor more devices.'
+                  : 'You need an active license to download the GridHealth agent.'
+                }
+              </p>
               <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-gridhealth-500 rounded-full flex items-center justify-center mr-4 mt-1">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                {!organization && (
+                  <button
+                    onClick={() => downloadAgent({ 
+                      id: 'individual', 
+                      license_key: 'INDIVIDUAL-FREE', 
+                      device_limit: 3, 
+                      tier: 'individual', 
+                      status: 'active', 
+                      expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() 
+                    })}
+                    className="btn-primary text-lg px-8 py-3 w-full"
+                  >
+                    📥 Download Agent (Free - 3 Devices)
+                  </button>
+                )}
+                <Link href="/pricing" className="btn-outline text-lg px-8 py-3 w-full block text-center">
+                  💳 Purchase License for More Devices
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Agent Features */}
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="card">
+              <h3 className="text-xl font-semibold text-white mb-4">Agent Features</h3>
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  <div>
-                    <div className="text-white font-medium">Operating System</div>
-                    <div className="text-gray-400">Windows 10/11, Windows Server 2016+</div>
-                  </div>
+                  <span className="text-gray-300">Real-time CPU, Memory, Disk monitoring</span>
                 </div>
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-gridhealth-500 rounded-full flex items-center justify-center mr-4 mt-1">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <div className="flex items-center">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  <div>
-                    <div className="text-white font-medium">Memory</div>
-                    <div className="text-gray-400">Minimum 512MB RAM, Recommended 2GB+</div>
-                  </div>
+                  <span className="text-gray-300">Windows Service (auto-start)</span>
                 </div>
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-gridhealth-500 rounded-full flex items-center justify-center mr-4 mt-1">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <div className="flex items-center">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  <div>
-                    <div className="text-white font-medium">Storage</div>
-                    <div className="text-gray-400">50MB disk space, minimal I/O impact</div>
-                  </div>
+                  <span className="text-gray-300">Secure HTTPS communication</span>
                 </div>
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-gridhealth-500 rounded-full flex items-center justify-center mr-4 mt-1">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <div className="flex items-center">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  <div>
-                    <div className="text-white font-medium">Network</div>
-                    <div className="text-gray-400">HTTPS outbound to GridHealth API</div>
-                  </div>
+                  <span className="text-gray-300">MSI installer with silent deployment</span>
                 </div>
               </div>
             </div>
-            
-            <div className="space-y-6">
-              <h3 className="text-2xl font-semibold text-white mb-6">Features</h3>
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center mr-4 mt-1">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-white font-medium">Real-time Monitoring</div>
-                    <div className="text-gray-400">CPU, Memory, Disk, Network, Services</div>
-                  </div>
+
+            <div className="card">
+              <h3 className="text-xl font-semibold text-white mb-4">System Requirements</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">OS:</span>
+                  <span className="text-white font-medium">Windows 10/11, Server 2016+</span>
                 </div>
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center mr-4 mt-1">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-white font-medium">Windows Service</div>
-                    <div className="text-gray-400">Runs as background service, auto-start</div>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">RAM:</span>
+                  <span className="text-white font-medium">512MB minimum</span>
                 </div>
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center mr-4 mt-1">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-white font-medium">Secure Communication</div>
-                    <div className="text-gray-400">TLS 1.3, JWT authentication</div>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Storage:</span>
+                  <span className="text-white font-medium">50MB free space</span>
                 </div>
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center mr-4 mt-1">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-white font-medium">Easy Installation</div>
-                    <div className="text-gray-400">MSI installer, silent deployment support</div>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Network:</span>
+                  <span className="text-white font-medium">HTTPS outbound</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">Permissions:</span>
+                  <span className="text-white font-medium">Administrator</span>
                 </div>
               </div>
             </div>
@@ -259,30 +284,34 @@ export default function DownloadPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-dark-800 to-dark-900 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1),transparent_50%)]"></div>
-        <div className="absolute top-10 left-10 w-64 h-64 bg-gridhealth-600/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-10 right-10 w-80 h-80 bg-primary-600/20 rounded-full blur-3xl"></div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to Start Monitoring?
-          </h2>
-          <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Choose your plan and get started with GridHealth monitoring in minutes. 
-            Our lightweight agent will have you up and running in no time.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <Link href="/signup" className="btn-primary text-lg px-12 py-4">
-              🚀 Get Started Now
-            </Link>
-            <Link href="/pricing" className="btn-outline text-lg px-12 py-4">
-              💰 View Pricing
-            </Link>
+      {/* License Key Modal */}
+      {showLicenseKey && selectedLicense && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 rounded-xl p-8 max-w-md w-full">
+            <h3 className="text-2xl font-bold text-white mb-4">Download GridHealth Agent</h3>
+            <p className="text-gray-300 mb-6">
+              Your license key is: <span className="font-mono text-gridhealth-400 break-all">{selectedLicense.license_key}</span>
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={downloadAgentFile}
+                className="btn-primary w-full py-3"
+              >
+                📥 Download Configuration
+              </button>
+              <button
+                onClick={() => setShowLicenseKey(false)}
+                className="btn-outline w-full py-3"
+              >
+                Close
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-4 text-center">
+              The agent installer will be available soon. For now, download the configuration file.
+            </p>
           </div>
         </div>
-      </section>
+      )}
     </div>
   )
 } 

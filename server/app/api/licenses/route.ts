@@ -24,23 +24,47 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get user's organization through user_roles
+    // Get user's role and organization info
     const { data: userRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
-      .select('organization_id')
+      .select('organization_id, company_id, role')
       .eq('user_id', user.id)
       .single()
 
-    if (roleError || !userRole?.organization_id) {
+    if (roleError) {
       console.error('❌ User role not found:', roleError)
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+      return NextResponse.json({ error: 'User role not found' }, { status: 404 })
+    }
+
+    // Handle individual users
+    if (userRole.role === 'individual') {
+      console.log('👤 Individual user accessing licenses')
+      
+      return NextResponse.json({
+        success: true,
+        licenses: [],
+        organization: {
+          id: 'individual',
+          name: 'Individual Account',
+          subscription_status: 'active',
+          subscription_tier: 'individual',
+          device_limit: 3
+        }
+      })
+    }
+
+    // Handle organization/company users
+    const organizationId = userRole.organization_id || userRole.company_id
+    if (!organizationId) {
+      console.error('❌ No organization or company found for user')
+      return NextResponse.json({ error: 'Organization or company not found' }, { status: 404 })
     }
 
     // Get organization details
     const { data: organization, error: orgError } = await supabaseAdmin
       .from('organizations')
       .select('*')
-      .eq('id', userRole.organization_id)
+      .eq('id', organizationId)
       .single()
 
     if (orgError) {
@@ -52,7 +76,7 @@ export async function GET(request: NextRequest) {
     const { data: licenses, error: licensesError } = await supabaseAdmin
       .from('licenses')
       .select('*')
-      .eq('organization_id', userRole.organization_id)
+      .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })
 
     if (licensesError) {
