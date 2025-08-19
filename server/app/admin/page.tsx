@@ -43,12 +43,26 @@ async function getAdminData() {
       .order('created_at', { ascending: false })
 
     // Calculate recurring revenue (MYR 11 per device per 3 months)
+    // EXCLUDE admin organizations from revenue calculations
     const activeLicenses = await supabaseAdmin
       .from('licenses')
-      .select('device_limit, status')
+      .select('device_limit, status, organization_id')
       .eq('status', 'active')
 
-    const totalDeviceLimit = activeLicenses.data?.reduce((sum, license) => sum + license.device_limit, 0) || 0
+    // Get admin organization IDs to exclude from revenue
+    const adminOrgs = await supabaseAdmin
+      .from('organizations')
+      .select('id')
+      .eq('subscription_status', 'admin')
+
+    const adminOrgIds = adminOrgs.data?.map(org => org.id) || []
+
+    // Calculate revenue only for non-admin organizations
+    const revenueLicenses = activeLicenses.data?.filter(license => 
+      !adminOrgIds.includes(license.organization_id)
+    ) || []
+
+    const totalDeviceLimit = revenueLicenses.reduce((sum, license) => sum + license.device_limit, 0)
     const monthlyRevenue = (totalDeviceLimit * 11) / 3 // MYR 11 per device per 3 months
     const annualRevenue = monthlyRevenue * 12
 
@@ -62,7 +76,8 @@ async function getAdminData() {
       companies: companies || [],
       totalDeviceLimit,
       monthlyRevenue,
-      annualRevenue
+      annualRevenue,
+      adminOrgCount: adminOrgIds.length
     }
   } catch (error) {
     console.error('Error fetching admin data:', error)
@@ -115,7 +130,8 @@ export default async function AdminPage() {
     companies,
     totalDeviceLimit,
     monthlyRevenue,
-    annualRevenue
+    annualRevenue,
+    adminOrgCount
   } = adminData
 
   return (
@@ -160,10 +176,11 @@ export default async function AdminPage() {
           </div>
 
           {/* Revenue Overview */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <div className="grid md:grid-cols-4 gap-6 mb-12">
             <div className="card text-center">
               <div className="text-3xl font-bold text-green-400 mb-2">{totalDeviceLimit}</div>
-              <div className="text-gray-400">Total Device Limit</div>
+              <div className="text-gray-400">Revenue Device Limit</div>
+              <div className="text-xs text-gray-500 mt-1">Excluding Admin</div>
             </div>
             <div className="card text-center">
               <div className="text-3xl font-bold text-blue-400 mb-2">MYR {monthlyRevenue.toFixed(2)}</div>
@@ -172,6 +189,11 @@ export default async function AdminPage() {
             <div className="card text-center">
               <div className="text-3xl font-bold text-purple-400 mb-2">MYR {annualRevenue.toFixed(2)}</div>
               <div className="text-gray-400">Annual Revenue</div>
+            </div>
+            <div className="card text-center">
+              <div className="text-3xl font-bold text-orange-400 mb-2">{adminOrgCount}</div>
+              <div className="text-gray-400">Admin Orgs</div>
+              <div className="text-xs text-gray-500 mt-1">Non-Revenue</div>
             </div>
           </div>
 
@@ -252,30 +274,36 @@ export default async function AdminPage() {
             <div className="card">
               <h3 className="text-xl font-semibold text-white mb-4">User Management</h3>
               <div className="space-y-3">
-                <Link href="/admin/users" className="w-full btn-primary py-3 block text-center">
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   👤 View All Users
-                </Link>
-                <Link href="/admin/users/create" className="w-full btn-secondary py-3 block text-center">
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   ➕ Create New User
-                </Link>
-                <Link href="/admin/users/analytics" className="w-full btn-outline py-3 block text-center">
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   📊 User Analytics
-                </Link>
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
               </div>
             </div>
             
             <div className="card">
               <h3 className="text-xl font-semibold text-white mb-4">Organization Management</h3>
               <div className="space-y-3">
-                <Link href="/admin/organizations" className="w-full btn-primary py-3 block text-center">
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   🏢 Manage Organizations
-                </Link>
-                <Link href="/admin/organizations/create" className="w-full btn-secondary py-3 block text-center">
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   ➕ Create Organization
-                </Link>
-                <Link href="/admin/licenses" className="w-full btn-outline py-3 block text-center">
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   📋 License Management
-                </Link>
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
               </div>
             </div>
           </div>
@@ -285,30 +313,36 @@ export default async function AdminPage() {
             <div className="card">
               <h3 className="text-xl font-semibold text-white mb-4">Company Management</h3>
               <div className="space-y-3">
-                <Link href="/admin/companies" className="w-full btn-primary py-3 block text-center">
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   🏢 Manage Companies
-                </Link>
-                <Link href="/admin/companies/create" className="w-full btn-secondary py-3 block text-center">
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   ➕ Create Company
-                </Link>
-                <Link href="/admin/billing" className="w-full btn-outline py-3 block text-center">
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   💰 Billing Overview
-                </Link>
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
               </div>
             </div>
             
             <div className="card">
               <h3 className="text-xl font-semibold text-white mb-4">System Administration</h3>
               <div className="space-y-3">
-                <Link href="/admin/settings" className="w-full btn-primary py-3 block text-center">
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   ⚙️ System Settings
-                </Link>
-                <Link href="/admin/analytics" className="w-full btn-secondary py-3 block text-center">
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   📊 System Analytics
-                </Link>
-                <Link href="/admin/security" className="w-full btn-outline py-3 block text-center">
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
+                <div className="w-full bg-dark-800 py-3 px-4 rounded-lg text-center text-gray-400">
                   🔒 Security Settings
-                </Link>
+                  <div className="text-xs text-gray-500 mt-1">Coming Soon</div>
+                </div>
               </div>
             </div>
           </div>
