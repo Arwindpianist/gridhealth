@@ -1,13 +1,34 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, useUser } from '@clerk/nextjs'
 import { useOnboarding } from '../hooks/useOnboarding'
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const { needsOnboarding, isLoading } = useOnboarding()
+  const { user } = useUser()
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        try {
+          const response = await fetch('/api/admin/check-status')
+          if (response.ok) {
+          const data = await response.json()
+          setIsAdmin(data.isAdmin || false)
+          }
+        } catch (error) {
+          console.error('Error checking admin status:', error)
+        }
+      }
+    }
+
+    checkAdminStatus()
+  }, [user])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-dark-900/95 backdrop-blur-md border-b border-dark-700/50 shadow-2xl">
@@ -66,6 +87,11 @@ export default function Header() {
                   <Link href="/licenses" className="text-gray-300 hover:text-white transition-colors duration-200">
                     Licenses
                   </Link>
+                  {isAdmin && (
+                    <Link href="/admin" className="text-purple-400 hover:text-purple-300 transition-colors duration-200 font-semibold">
+                      🔐 Admin
+                    </Link>
+                  )}
                   <UserButton 
                     appearance={{
                       elements: {
@@ -136,6 +162,11 @@ export default function Header() {
                     <Link href="/licenses" className="text-gray-300 hover:text-white transition-colors duration-200 py-2">
                       Licenses
                     </Link>
+                    {isAdmin && (
+                      <Link href="/admin" className="text-purple-400 hover:text-purple-300 transition-colors duration-200 py-2 font-semibold">
+                        🔐 Admin Dashboard
+                      </Link>
+                    )}
                     <div className="flex justify-center">
                       <UserButton 
                         appearance={{

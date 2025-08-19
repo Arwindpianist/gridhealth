@@ -138,3 +138,5 @@ README.md
 
 # Allow LICENSE.md to be tracked
 !LICENSE.md
+
+*.sql
