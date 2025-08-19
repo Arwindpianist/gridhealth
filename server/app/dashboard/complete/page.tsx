@@ -180,12 +180,12 @@ export default async function CompleteDashboardPage() {
                     <div className="text-sm text-gray-400 mb-3">Devices</div>
                     <div className="text-lg font-bold text-white mb-3">{plan.price}</div>
                     <div className="text-xs text-gray-500">per 3 months</div>
-                    <button 
-                      onClick={() => window.location.href = `/pricing?tier=${plan.tier.toLowerCase()}`}
-                      className="w-full mt-3 py-2 px-4 bg-gradient-to-r from-gridhealth-500 to-primary-500 text-white rounded-lg hover:from-gridhealth-600 hover:to-primary-600 transition-all font-medium"
+                    <Link 
+                      href={`/pricing?tier=${plan.tier.toLowerCase()}`}
+                      className="w-full mt-3 py-2 px-4 bg-gradient-to-r from-gridhealth-500 to-primary-500 text-white rounded-lg hover:from-gridhealth-600 hover:to-primary-600 transition-all font-medium block text-center"
                     >
                       Select Plan
-                    </button>
+                    </Link>
                   </div>
                 ))}
               </div>
