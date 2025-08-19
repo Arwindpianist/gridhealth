@@ -11,15 +11,15 @@ export default function Header() {
   const { needsOnboarding, isLoading } = useOnboarding()
   const { user } = useUser()
 
-  // Check if user is admin
+  // Check if user is admin (independent of onboarding status)
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (user) {
         try {
           const response = await fetch('/api/admin/check-status')
           if (response.ok) {
-          const data = await response.json()
-          setIsAdmin(data.isAdmin || false)
+            const data = await response.json()
+            setIsAdmin(data.isAdmin || false)
           }
         } catch (error) {
           console.error('Error checking admin status:', error)
@@ -76,9 +76,16 @@ export default function Header() {
             
             <SignedIn>
               {!isLoading && needsOnboarding ? (
-                <Link href="/onboarding" className="btn-primary px-6 py-2">
-                  Complete Setup
-                </Link>
+                <>
+                  <Link href="/onboarding" className="btn-primary px-6 py-2">
+                    Complete Setup
+                  </Link>
+                  {isAdmin && (
+                    <Link href="/admin" className="text-purple-400 hover:text-purple-300 transition-colors duration-200 font-semibold">
+                      🔐 Admin
+                    </Link>
+                  )}
+                </>
               ) : (
                 <>
                   <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors duration-200">
@@ -151,9 +158,16 @@ export default function Header() {
               
               <SignedIn>
                 {!isLoading && needsOnboarding ? (
-                  <Link href="/onboarding" className="btn-primary w-full text-center py-3">
-                    Complete Setup
-                  </Link>
+                  <>
+                    <Link href="/onboarding" className="btn-primary w-full text-center py-3">
+                      Complete Setup
+                    </Link>
+                    {isAdmin && (
+                      <Link href="/admin" className="text-purple-400 hover:text-purple-300 transition-colors duration-200 py-2 font-semibold">
+                        🔐 Admin Dashboard
+                      </Link>
+                    )}
+                  </>
                 ) : (
                   <>
                     <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors duration-200 py-2">

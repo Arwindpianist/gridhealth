@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { checkOnboardingStatus, OnboardingStatus } from '../../lib/onboarding'
+
+export interface OnboardingStatus {
+  needsOnboarding: boolean
+  isComplete: boolean
+  missingFields: string[]
+}
 
 export function useOnboarding() {
   const { user, isLoaded } = useUser()
@@ -23,8 +28,18 @@ export function useOnboarding() {
     if (user) {
       try {
         setIsLoading(true)
-        const status = await checkOnboardingStatus(user.id)
-        setOnboardingStatus(status)
+        const response = await fetch('/api/onboarding/status')
+        if (response.ok) {
+          const status = await response.json()
+          setOnboardingStatus(status)
+        } else {
+          // Fallback to assuming onboarding is needed
+          setOnboardingStatus({
+            needsOnboarding: true,
+            isComplete: false,
+            missingFields: ['first_name', 'last_name', 'phone']
+          })
+        }
       } catch (error) {
         console.error('Error checking onboarding status:', error)
         // Fallback to assuming onboarding is needed

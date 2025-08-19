@@ -13,20 +13,11 @@ export async function GET(request: NextRequest) {
     // Check if user has completed onboarding by looking for basic profile info
     const { data: user, error } = await supabaseAdmin
       .from('users')
-      .select('first_name, last_name, phone')
+      .select('id, first_name, last_name, phone')
       .eq('clerk_user_id', userId)
       .single()
 
-    if (error) {
-      console.error('Error checking user status:', error)
-      return NextResponse.json({ 
-        needsOnboarding: true,
-        isComplete: false,
-        missingFields: ['first_name', 'last_name', 'phone']
-      })
-    }
-
-    if (!user) {
+    if (error || !user) {
       return NextResponse.json({ 
         needsOnboarding: true,
         isComplete: false,
@@ -40,12 +31,25 @@ export async function GET(request: NextRequest) {
     if (!user.last_name) missingFields.push('last_name')
     if (!user.phone) missingFields.push('phone')
 
+    // Check if user has a role assigned (indicating onboarding is complete)
+    const { data: userRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('role, organization_id, company_id')
+      .eq('user_id', user.id)
+      .single()
+
+    // If no user role exists, onboarding is not complete
+    if (!userRole) {
+      missingFields.push('role_assignment')
+    }
+
     const isComplete = missingFields.length === 0
 
     return NextResponse.json({
       needsOnboarding: !isComplete,
       isComplete,
-      missingFields
+      missingFields,
+      userRole: userRole ? userRole.role : null
     })
 
   } catch (error) {
@@ -53,7 +57,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       needsOnboarding: true,
       isComplete: false,
-      missingFields: ['first_name', 'last_name', 'phone']
+      missingFields: ['first_name', 'last_name', 'phone', 'role_assignment']
     })
   }
 } 
