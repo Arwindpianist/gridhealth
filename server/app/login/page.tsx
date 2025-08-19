@@ -1,84 +1,57 @@
 'use client'
 
 import React from 'react'
-import Link from 'next/link'
+import { SignIn } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
+  const router = useRouter()
+
   return (
     <div className="min-h-screen bg-dark-900 flex items-center justify-center py-20">
       <div className="max-w-md w-full mx-auto px-4">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">
-            Welcome Back
+            Welcome Back to <span className="gradient-text">GridHealth</span>
           </h1>
-          <p className="text-gray-400">
-            Sign in to your GridHealth dashboard
+          <p className="text-gray-300">
+            Sign in to access your monitoring dashboard
           </p>
         </div>
 
-        <div className="card">
-          <div className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                required
-                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gridhealth-500 focus:border-transparent"
-                placeholder="Enter your email address"
-              />
-            </div>
+        <div className="card p-6">
+          <SignIn 
+            appearance={{
+              elements: {
+                rootBox: "w-full",
+                card: "bg-transparent shadow-none",
+                headerTitle: "text-2xl font-bold text-white",
+                headerSubtitle: "text-gray-300",
+                formButtonPrimary: "bg-gradient-to-r from-gridhealth-500 to-primary-500 hover:from-gridhealth-600 hover:to-primary-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200",
+                formFieldInput: "bg-dark-700 border-dark-600 text-white placeholder-gray-400 focus:border-gridhealth-500 focus:ring-gridhealth-500",
+                formFieldLabel: "text-gray-300",
+                footerActionLink: "text-gridhealth-400 hover:text-gridhealth-300",
+                dividerLine: "bg-dark-600",
+                dividerText: "text-gray-400",
+                socialButtonsBlockButton: "bg-dark-700 border-dark-600 text-gray-300 hover:bg-dark-600",
+                formFieldInputShowPasswordButton: "text-gray-400 hover:text-gray-300"
+              }
+            }}
+            afterSignInUrl="/dashboard"
+            redirectUrl="/dashboard"
+          />
+        </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                required
-                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gridhealth-500 focus:border-transparent"
-                placeholder="Enter your password"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="rememberMe"
-                  name="rememberMe"
-                  className="w-4 h-4 text-gridhealth-600 bg-dark-700 border-dark-600 rounded focus:ring-gridhealth-500 focus:ring-2"
-                />
-                <label htmlFor="rememberMe" className="ml-2 text-sm text-gray-300">
-                  Remember me
-                </label>
-              </div>
-              <Link href="/forgot-password" className="text-sm text-gridhealth-400 hover:text-gridhealth-300">
-                Forgot password?
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full btn-primary py-3 text-lg font-semibold"
+        <div className="text-center mt-6">
+          <p className="text-gray-400">
+            Don't have an account?{' '}
+            <button 
+              onClick={() => router.push('/signup')}
+              className="text-gridhealth-400 hover:text-gridhealth-300 font-medium"
             >
-              Sign In
+              Sign up
             </button>
-
-            <div className="text-center">
-              <p className="text-gray-400">
-                Don't have an account?{' '}
-                <Link href="/signup" className="text-gridhealth-400 hover:text-gridhealth-300 font-medium">
-                  Sign up here
-                </Link>
-              </p>
-            </div>
-          </div>
+          </p>
         </div>
       </div>
     </div>

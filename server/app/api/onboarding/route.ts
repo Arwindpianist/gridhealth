@@ -24,12 +24,22 @@ export async function POST(request: NextRequest) {
       contact_phone 
     } = body
 
+    console.log('📝 Onboarding request received:', {
+      userId,
+      account_type,
+      organization_name,
+      company_name,
+      first_name,
+      last_name
+    })
+
     // Validate required fields
     if (!first_name || !last_name) {
       return NextResponse.json({ error: 'First name and last name are required' }, { status: 400 })
     }
 
     // Update user profile
+    console.log('👤 Updating user profile for:', userId)
     const { error: userError } = await supabaseAdmin
       .from('users')
       .update({
@@ -40,12 +50,14 @@ export async function POST(request: NextRequest) {
       .eq('clerk_user_id', userId)
 
     if (userError) {
-      console.error('Error updating user:', userError)
+      console.error('❌ Error updating user:', userError)
       return NextResponse.json({ error: 'Failed to update user profile' }, { status: 500 })
     }
+    console.log('✅ User profile updated successfully')
 
     // Create organization/company if needed
     if (account_type === 'organization' && organization_name) {
+      console.log('🏢 Creating organization:', organization_name)
       const { data: org, error: orgError } = await supabaseAdmin
         .from('organizations')
         .insert({
@@ -59,18 +71,25 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (orgError) {
-        console.error('Error creating organization:', orgError)
+        console.error('❌ Error creating organization:', orgError)
         return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 })
       }
+      console.log('✅ Organization created:', org.id)
 
       // Get user ID from users table
-      const { data: userData } = await supabaseAdmin
+      const { data: userData, error: userDataError } = await supabaseAdmin
         .from('users')
         .select('id')
         .eq('clerk_user_id', userId)
         .single()
 
+      if (userDataError) {
+        console.error('❌ Error getting user data:', userDataError)
+        return NextResponse.json({ error: 'Failed to get user data' }, { status: 500 })
+      }
+
       if (userData) {
+        console.log('👥 Assigning user role for organization')
         // Assign user role to organization
         const { error: roleError } = await supabaseAdmin
           .from('user_roles')
@@ -81,13 +100,15 @@ export async function POST(request: NextRequest) {
           })
 
         if (roleError) {
-          console.error('Error assigning user role:', roleError)
+          console.error('❌ Error assigning user role:', roleError)
           return NextResponse.json({ error: 'Failed to assign user role' }, { status: 500 })
         }
+        console.log('✅ User role assigned successfully')
       }
     }
 
     if (account_type === 'company' && company_name) {
+      console.log('🏭 Creating company:', company_name)
       const { data: company, error: companyError } = await supabaseAdmin
         .from('companies')
         .insert({
@@ -100,18 +121,25 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (companyError) {
-        console.error('Error creating company:', companyError)
+        console.error('❌ Error creating company:', companyError)
         return NextResponse.json({ error: 'Failed to create company' }, { status: 500 })
       }
+      console.log('✅ Company created:', company.id)
 
       // Get user ID from users table
-      const { data: userData } = await supabaseAdmin
+      const { data: userData, error: userDataError } = await supabaseAdmin
         .from('users')
         .select('id')
         .eq('clerk_user_id', userId)
         .single()
 
+      if (userDataError) {
+        console.error('❌ Error getting user data:', userDataError)
+        return NextResponse.json({ error: 'Failed to get user data' }, { status: 500 })
+      }
+
       if (userData) {
+        console.log('👥 Assigning user role for company')
         // Assign user role to company
         const { error: roleError } = await supabaseAdmin
           .from('user_roles')
@@ -122,19 +150,25 @@ export async function POST(request: NextRequest) {
           })
 
         if (roleError) {
-          console.error('Error assigning user role:', roleError)
+          console.error('❌ Error assigning user role:', roleError)
           return NextResponse.json({ error: 'Failed to assign user role' }, { status: 500 })
         }
+        console.log('✅ User role assigned successfully')
       }
     }
 
+    if (account_type === 'individual') {
+      console.log('👤 Individual user - no additional setup needed')
+    }
+
+    console.log('🎉 Onboarding completed successfully for:', userId)
     return NextResponse.json({ 
       success: true, 
       message: 'Onboarding completed successfully' 
     })
 
   } catch (error) {
-    console.error('Error in onboarding API:', error)
+    console.error('💥 Error in onboarding API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 

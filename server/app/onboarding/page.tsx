@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 
 type AccountType = 'individual' | 'organization' | 'company'
-type OnboardingStep = 'personal' | 'account-type' | 'details' | 'complete'
+type OnboardingStep = 'personal' | 'account-type' | 'details' | 'license-purchase' | 'complete'
 
 interface UserProfile {
   first_name: string
@@ -36,6 +36,7 @@ export default function OnboardingPage() {
     phone: '',
     account_type: 'individual'
   })
+  const [selectedLicenseTier, setSelectedLicenseTier] = useState<'basic' | 'standard' | 'professional' | 'enterprise'>('standard')
 
   // Check if user has already completed onboarding
   useEffect(() => {
@@ -103,7 +104,16 @@ export default function OnboardingPage() {
     } else if (currentStep === 'account-type') {
       setCurrentStep('details')
     } else if (currentStep === 'details') {
-      completeOnboarding()
+      if (profile.account_type === 'individual') {
+        // Individual users go directly to complete
+        completeOnboarding()
+      } else {
+        // Organization/Company users go to license purchase
+        setCurrentStep('license-purchase')
+      }
+    } else if (currentStep === 'license-purchase') {
+      // License purchase is handled by the component
+      // User will be redirected to Stripe checkout
     }
   }
 
@@ -112,6 +122,8 @@ export default function OnboardingPage() {
       setCurrentStep('personal')
     } else if (currentStep === 'details') {
       setCurrentStep('account-type')
+    } else if (currentStep === 'license-purchase') {
+      setCurrentStep('details')
     }
   }
 
@@ -225,6 +237,15 @@ export default function OnboardingPage() {
               onNext={nextStep}
               onBack={prevStep}
               isLoading={isLoading}
+            />
+          )}
+
+          {currentStep === 'license-purchase' && (
+            <LicensePurchaseStep 
+              selectedTier={selectedLicenseTier}
+              setSelectedTier={setSelectedLicenseTier}
+              onNext={nextStep}
+              onBack={prevStep}
             />
           )}
 
@@ -590,11 +611,112 @@ function DetailsStep({ profile, updateProfile, errors, onNext, onBack, isLoading
   )
 }
 
+function LicensePurchaseStep({ selectedTier, setSelectedTier, onNext, onBack }: {
+  selectedTier: 'basic' | 'standard' | 'professional' | 'enterprise'
+  setSelectedTier: (tier: 'basic' | 'standard' | 'professional' | 'enterprise') => void
+  onNext: () => void
+  onBack: () => void
+}) {
+  const handlePurchase = async () => {
+    try {
+      const response = await fetch('/api/licenses/purchase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tier: selectedTier }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Redirect to Stripe checkout
+        window.location.href = data.checkoutUrl
+      } else {
+        console.error('Failed to create checkout session')
+      }
+    } catch (error) {
+      console.error('Error purchasing license:', error)
+    }
+  }
+
+  const getDeviceLimit = (tier: string) => {
+    switch (tier) {
+      case 'basic': return 10
+      case 'standard': return 50
+      case 'professional': return 100
+      case 'enterprise': return 500
+      default: return 50
+    }
+  }
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-white mb-2 text-center">Choose Your License</h2>
+      <p className="text-gray-400 mb-8 text-center">
+        All licenses cost MYR 11 per device per 3 months. Choose the tier that fits your needs.
+      </p>
+      
+      <div className="grid md:grid-cols-2 gap-4 mb-8">
+        {(['basic', 'standard', 'professional', 'enterprise'] as const).map((tier) => (
+          <div
+            key={tier}
+            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+              selectedTier === tier
+                ? 'border-gridhealth-500 bg-gridhealth-500/10'
+                : 'border-dark-700 hover:border-dark-600'
+            }`}
+            onClick={() => setSelectedTier(tier)}
+          >
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                {tier.charAt(0).toUpperCase() + tier.slice(1)}
+              </h3>
+              <div className="text-2xl font-bold text-gridhealth-400 mb-1">
+                {getDeviceLimit(tier)} Devices
+              </div>
+              <div className="text-sm text-gray-400">MYR 11 per 3 months</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <div className="text-center p-4 bg-dark-800 rounded-lg mb-8">
+        <div className="text-lg text-white mb-2">
+          Selected Plan: <span className="text-gridhealth-400 font-semibold">
+            {selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)}
+          </span>
+        </div>
+        <div className="text-gray-300">
+          Device Limit: <span className="font-semibold">{getDeviceLimit(selectedTier)}</span> devices
+        </div>
+        <div className="text-gray-300">
+          Price: <span className="font-semibold">MYR 11</span> per 3 months
+        </div>
+      </div>
+
+      <div className="flex space-x-4">
+        <button
+          onClick={onBack}
+          className="btn-outline flex-1 py-3"
+        >
+          Back
+        </button>
+        <button
+          onClick={handlePurchase}
+          className="btn-primary flex-1 py-3"
+        >
+          🚀 Purchase License
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function CompleteStep() {
   return (
     <div className="text-center py-12">
       <div className="text-6xl mb-6">🎉</div>
-      <h2 className="text-3xl font-bold text-white mb-4">Welcome to GridHealth!</h2>
+      <h2 className="text-2xl font-bold text-white mb-4">Welcome to GridHealth!</h2>
       <p className="text-gray-400 mb-8">Your account has been set up successfully. Redirecting you to the dashboard...</p>
       
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gridhealth-500 mx-auto"></div>

@@ -27,7 +27,7 @@ export default function HomePage() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
-              <Link href="/dashboard" className="btn-primary text-lg px-10 py-4 text-lg">
+              <Link href="/signup" className="btn-primary text-lg px-10 py-4 text-lg">
                 🚀 Get Started
               </Link>
               <Link href="#features" className="btn-outline text-lg px-10 py-4">
@@ -115,14 +115,14 @@ export default function HomePage() {
           </div>
           
           <div className="max-w-2xl mx-auto">
-            <div className="card-hover text-center relative overflow-hidden">
+            <div className="card-hover text-center relative overflow-hidden pb-8">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gridhealth-500 to-primary-500"></div>
               <div className="mb-8">
-                <h3 className="text-3xl font-bold text-white mb-4">Per Device Pricing</h3>
+                <h3 className="text-3xl font-bold text-white mt-4 mb-4">Per Device Pricing</h3>
                 <div className="text-6xl font-bold gradient-text mb-2">
                   MYR 11
                 </div>
-                <div className="text-xl text-gray-400">per device per year</div>
+                <div className="text-xl text-gray-400">per device per 3 months</div>
               </div>
               
               <ul className="text-left space-y-4 mb-10 max-w-md mx-auto">
@@ -168,7 +168,7 @@ export default function HomePage() {
                 </li>
               </ul>
               
-              <Link href="/dashboard" className="btn-primary w-full text-lg py-4">
+              <Link href="/signup" className="btn-primary w-full text-lg py-4">
                 🚀 Start Monitoring
               </Link>
             </div>
@@ -191,10 +191,10 @@ export default function HomePage() {
             Get started in minutes, not days.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <Link href="/dashboard" className="btn-primary text-lg px-12 py-4">
+            <Link href="/signup" className="btn-primary text-lg px-12 py-4">
               🚀 Get Started Today
             </Link>
-            <Link href="/dashboard" className="btn-outline text-lg px-12 py-4">
+            <Link href="/signup" className="btn-outline text-lg px-12 py-4">
               📊 View Demo
             </Link>
           </div>

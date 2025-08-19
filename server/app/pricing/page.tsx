@@ -34,7 +34,7 @@ export default function PricingPage() {
                 <div className="text-4xl font-bold text-gridhealth-400 mb-2">
                   MYR 11
                 </div>
-                <div className="text-gray-400">per device per year</div>
+                <div className="text-gray-400">per device per 3 months</div>
               </div>
               
               <div className="space-y-4 mb-8 text-left">
@@ -88,7 +88,7 @@ export default function PricingPage() {
                 <div className="text-4xl font-bold text-gridhealth-400 mb-2">
                   MYR 11
                 </div>
-                <div className="text-gray-400">per device per year</div>
+                <div className="text-gray-400">per device per 3 months</div>
                 <div className="text-sm text-gray-500 mt-2">Bulk discounts available</div>
               </div>
               
@@ -147,9 +147,9 @@ export default function PricingPage() {
               <div className="mb-8">
                 <h3 className="text-2xl font-bold text-white mb-4">System Integrator</h3>
                 <div className="text-4xl font-bold text-primary-400 mb-2">
-                  MYR 9
+                  MYR 11
                 </div>
-                <div className="text-gray-400">per device per year</div>
+                <div className="text-gray-400">per device per 3 months</div>
                 <div className="text-sm text-gray-500 mt-2">Volume pricing</div>
               </div>
               
@@ -216,7 +216,7 @@ export default function PricingPage() {
             <div className="card">
               <h3 className="text-xl font-semibold text-white mb-3">How does the per-device pricing work?</h3>
               <p className="text-gray-300">
-                You pay MYR 11 per year for each device you monitor. A device is any computer, server, or workstation 
+                You pay MYR 11 per 3 months for each device you monitor. A device is any computer, server, or workstation 
                 running the GridHealth agent. You can add or remove devices at any time, and billing is prorated.
               </p>
             </div>
@@ -225,7 +225,7 @@ export default function PricingPage() {
               <h3 className="text-xl font-semibold text-white mb-3">Are there any setup or hidden fees?</h3>
               <p className="text-gray-300">
                 No! There are no setup fees, no hidden charges, and no surprise bills. You pay exactly MYR 11 per device 
-                per year, with no additional costs. All features are included in the base price.
+                per 3 months, with no additional costs. All features are included in the base price.
               </p>
             </div>
             
