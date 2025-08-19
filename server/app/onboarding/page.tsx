@@ -147,7 +147,7 @@ export default function OnboardingPage() {
 
       setCurrentStep('complete')
       setTimeout(() => {
-        router.push('/dashboard')
+        router.push('/dashboard/complete')
       }, 2000)
 
     } catch (error) {
