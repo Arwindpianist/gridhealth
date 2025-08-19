@@ -131,4 +131,8 @@ agent/obj/
 server/data/
 *.db
 *.sqlite 
+
+# Documentation files (intentionally ignored)
+README.md
+LICENSE.md
 *.md
