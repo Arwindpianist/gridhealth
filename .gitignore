@@ -134,5 +134,7 @@ server/data/
 
 # Documentation files (intentionally ignored)
 README.md
-LICENSE.md
 *.md
+
+# Allow LICENSE.md to be tracked
+!LICENSE.md
