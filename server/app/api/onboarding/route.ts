@@ -196,11 +196,32 @@ export async function POST(request: NextRequest) {
         if (userData) {
           console.log('👥 Creating individual user role. User ID:', userData.id)
           
-          // Create a basic user role for individual users
+          // Create a virtual organization for individual users to satisfy the constraint
+          const { data: virtualOrg, error: orgError } = await supabaseAdmin
+            .from('organizations')
+            .insert({
+              name: `Individual Account - ${first_name} ${last_name}`,
+              description: 'Individual user account',
+              contact_email: contact_email || null,
+              contact_phone: contact_phone || null,
+              address: address || null,
+              device_limit: 3
+            })
+            .select()
+            .single()
+
+          if (orgError) {
+            console.error('❌ Error creating virtual organization for individual:', orgError)
+            return NextResponse.json({ error: 'Failed to create virtual organization' }, { status: 500 })
+          }
+          console.log('✅ Virtual organization created for individual:', virtualOrg.id)
+          
+          // Create a basic user role for individual users linked to the virtual organization
           const { error: roleError } = await supabaseAdmin
             .from('user_roles')
             .insert({
               user_id: userData.id,
+              organization_id: virtualOrg.id,
               role: 'individual'
             })
 
