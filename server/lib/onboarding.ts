@@ -1,4 +1,7 @@
-import { supabase } from './supabase'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
 export interface OnboardingStatus {
   needsOnboarding: boolean
@@ -6,8 +9,19 @@ export interface OnboardingStatus {
   missingFields: string[]
 }
 
-export async function checkOnboardingStatus(clerkUserId: string): Promise<OnboardingStatus> {
+export async function checkOnboardingStatus(clerkUserId: string, accessToken?: string): Promise<OnboardingStatus> {
   try {
+    // Create authenticated client if we have an access token
+    const supabase = accessToken 
+      ? createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: {
+              Authorization: `Bearer ${accessToken}`
+            }
+          }
+        })
+      : createClient(supabaseUrl, supabaseAnonKey)
+
     const { data: user, error } = await supabase
       .from('users')
       .select('first_name, last_name, phone')

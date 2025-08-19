@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
-import { supabase } from '../../lib/supabase'
+import { useUser, useAuth } from '@clerk/nextjs'
+import { createClient } from '@supabase/supabase-js'
 
 type AccountType = 'individual' | 'organization' | 'company'
 type OnboardingStep = 'personal' | 'account-type' | 'details' | 'complete'
@@ -25,8 +25,12 @@ interface ValidationErrors {
   [key: string]: string
 }
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+
 export default function OnboardingPage() {
   const { user, isLoaded } = useUser()
+  const { getToken } = useAuth()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('personal')
   const [isLoading, setIsLoading] = useState(false)
@@ -47,6 +51,15 @@ export default function OnboardingPage() {
 
   const checkOnboardingStatus = async () => {
     try {
+      const token = await getToken({ template: 'supabase' })
+      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      })
+
       const { data: userData, error } = await supabase
         .from('users')
         .select('first_name, last_name, phone')
@@ -131,6 +144,15 @@ export default function OnboardingPage() {
 
     setIsLoading(true)
     try {
+      const token = await getToken({ template: 'supabase' })
+      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      })
+
       // Update user profile
       const { error: userError } = await supabase
         .from('users')
@@ -255,6 +277,7 @@ export default function OnboardingPage() {
             <PersonalInfoStep 
               profile={profile} 
               updateProfile={updateProfile} 
+              errors={errors}
               onNext={nextStep}
             />
           )}
@@ -272,6 +295,7 @@ export default function OnboardingPage() {
             <DetailsStep 
               profile={profile} 
               updateProfile={updateProfile} 
+              errors={errors}
               onNext={nextStep}
               onBack={prevStep}
               isLoading={isLoading}
@@ -288,9 +312,10 @@ export default function OnboardingPage() {
 }
 
 // Step Components
-function PersonalInfoStep({ profile, updateProfile, onNext }: {
+function PersonalInfoStep({ profile, updateProfile, errors, onNext }: {
   profile: UserProfile
   updateProfile: (field: keyof UserProfile, value: string) => void
+  errors: ValidationErrors
   onNext: () => void
 }) {
   return (
@@ -307,9 +332,14 @@ function PersonalInfoStep({ profile, updateProfile, onNext }: {
             type="text"
             value={profile.first_name}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateProfile('first_name', e.target.value)}
-            className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:border-gridhealth-500 focus:ring-1 focus:ring-gridhealth-500"
+            className={`w-full px-4 py-3 bg-dark-800 border rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 ${
+              errors.first_name ? 'border-red-500' : 'border-dark-700 focus:border-gridhealth-500'
+            }`}
             placeholder="Enter your first name"
           />
+          {errors.first_name && (
+            <p className="text-red-400 text-sm mt-1">{errors.first_name}</p>
+          )}
         </div>
 
         <div>
@@ -320,9 +350,14 @@ function PersonalInfoStep({ profile, updateProfile, onNext }: {
             type="text"
             value={profile.last_name}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateProfile('last_name', e.target.value)}
-            className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:border-gridhealth-500 focus:ring-1 focus:ring-gridhealth-500"
+            className={`w-full px-4 py-3 bg-dark-800 border rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 ${
+              errors.last_name ? 'border-red-500' : 'border-dark-700 focus:border-gridhealth-500'
+            }`}
             placeholder="Enter your last name"
           />
+          {errors.last_name && (
+            <p className="text-red-400 text-sm mt-1">{errors.last_name}</p>
+          )}
         </div>
 
         <div>
@@ -333,9 +368,14 @@ function PersonalInfoStep({ profile, updateProfile, onNext }: {
             type="tel"
             value={profile.phone}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateProfile('phone', e.target.value)}
-            className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:border-gridhealth-500 focus:ring-1 focus:ring-gridhealth-500"
+            className={`w-full px-4 py-3 bg-dark-800 border rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 ${
+              errors.phone ? 'border-red-500' : 'border-dark-700 focus:border-gridhealth-500'
+            }`}
             placeholder="Enter your phone number"
           />
+          {errors.phone && (
+            <p className="text-red-400 text-sm mt-1">{errors.phone}</p>
+          )}
         </div>
       </div>
 
@@ -432,9 +472,10 @@ function AccountTypeStep({ profile, updateProfile, onNext, onBack }: {
   )
 }
 
-function DetailsStep({ profile, updateProfile, onNext, onBack, isLoading }: {
+function DetailsStep({ profile, updateProfile, errors, onNext, onBack, isLoading }: {
   profile: UserProfile
   updateProfile: (field: keyof UserProfile, value: string) => void
+  errors: ValidationErrors
   onNext: () => void
   onBack: () => void
   isLoading: boolean
@@ -461,9 +502,14 @@ function DetailsStep({ profile, updateProfile, onNext, onBack, isLoading }: {
               type="text"
               value={profile.organization_name || ''}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateProfile('organization_name', e.target.value)}
-              className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:border-gridhealth-500 focus:ring-1 focus:ring-gridhealth-500"
+              className={`w-full px-4 py-3 bg-dark-800 border rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 ${
+                errors.organization_name ? 'border-red-500' : 'border-dark-700 focus:border-gridhealth-500'
+              }`}
               placeholder="Enter organization name"
             />
+            {errors.organization_name && (
+              <p className="text-red-400 text-sm mt-1">{errors.organization_name}</p>
+            )}
           </div>
 
           <div>
@@ -487,9 +533,14 @@ function DetailsStep({ profile, updateProfile, onNext, onBack, isLoading }: {
               type="email"
               value={profile.contact_email || ''}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateProfile('contact_email', e.target.value)}
-              className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:border-gridhealth-500 focus:ring-1 focus:ring-gridhealth-500"
+              className={`w-full px-4 py-3 bg-dark-800 border rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 ${
+                errors.contact_email ? 'border-red-500' : 'border-dark-700 focus:border-gridhealth-500'
+              }`}
               placeholder="organization@example.com"
             />
+            {errors.contact_email && (
+              <p className="text-red-400 text-sm mt-1">{errors.contact_email}</p>
+            )}
           </div>
 
           <div>
@@ -519,9 +570,14 @@ function DetailsStep({ profile, updateProfile, onNext, onBack, isLoading }: {
               type="text"
               value={profile.company_name || ''}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateProfile('company_name', e.target.value)}
-              className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:border-gridhealth-500 focus:ring-1 focus:ring-gridhealth-500"
+              className={`w-full px-4 py-3 bg-dark-800 border rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 ${
+                errors.company_name ? 'border-red-500' : 'border-dark-700 focus:border-gridhealth-500'
+              }`}
               placeholder="Enter company name"
             />
+            {errors.company_name && (
+              <p className="text-red-400 text-sm mt-1">{errors.company_name}</p>
+            )}
           </div>
 
           <div>
@@ -532,7 +588,7 @@ function DetailsStep({ profile, updateProfile, onNext, onBack, isLoading }: {
               value={profile.description || ''}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateProfile('description', e.target.value)}
               rows={3}
-              className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500"
+              className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:ring-1 focus:ring-gridhealth-500"
               placeholder="Brief description of your company"
             />
           </div>

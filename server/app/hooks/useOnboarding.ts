@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useUser, useAuth } from '@clerk/nextjs'
 import { checkOnboardingStatus, OnboardingStatus } from '../../lib/onboarding'
 
 export function useOnboarding() {
   const { user, isLoaded } = useUser()
+  const { getToken } = useAuth()
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus>({
     needsOnboarding: false,
     isComplete: false,
@@ -13,21 +14,36 @@ export function useOnboarding() {
 
   useEffect(() => {
     if (isLoaded && user) {
-      checkOnboardingStatus(user.id).then(status => {
-        setOnboardingStatus(status)
-        setIsLoading(false)
-      })
+      checkOnboardingStatusWithAuth()
     } else if (isLoaded && !user) {
       setIsLoading(false)
     }
   }, [isLoaded, user])
 
+  const checkOnboardingStatusWithAuth = async () => {
+    if (user) {
+      try {
+        setIsLoading(true)
+        const token = await getToken({ template: 'supabase' })
+        const status = await checkOnboardingStatus(user.id, token || undefined)
+        setOnboardingStatus(status)
+      } catch (error) {
+        console.error('Error checking onboarding status:', error)
+        // Fallback to assuming onboarding is needed
+        setOnboardingStatus({
+          needsOnboarding: true,
+          isComplete: false,
+          missingFields: ['first_name', 'last_name', 'phone']
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  }
+
   const refreshOnboardingStatus = async () => {
     if (user) {
-      setIsLoading(true)
-      const status = await checkOnboardingStatus(user.id)
-      setOnboardingStatus(status)
-      setIsLoading(false)
+      await checkOnboardingStatusWithAuth()
     }
   }
 

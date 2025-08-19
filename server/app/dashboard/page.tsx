@@ -4,16 +4,23 @@ import { redirect } from 'next/navigation'
 import { checkOnboardingStatus } from '../../lib/onboarding'
 
 export default async function DashboardPage() {
-  const { userId } = await auth()
+  const { userId, getToken } = await auth()
   
   if (!userId) {
     redirect('/')
   }
 
   // Check if user needs to complete onboarding
-  const onboardingStatus = await checkOnboardingStatus(userId)
-  
-  if (onboardingStatus.needsOnboarding) {
+  try {
+    const token = await getToken({ template: 'supabase' })
+    const onboardingStatus = await checkOnboardingStatus(userId, token || undefined)
+    
+    if (onboardingStatus.needsOnboarding) {
+      redirect('/onboarding')
+    }
+  } catch (error) {
+    console.error('Error checking onboarding status:', error)
+    // If there's an error, redirect to onboarding to be safe
     redirect('/onboarding')
   }
 
