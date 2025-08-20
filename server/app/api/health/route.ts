@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { randomUUID } from 'crypto'
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -73,12 +74,19 @@ export async function POST(request: Request) {
       data_size: JSON.stringify(body).length
     })
 
+    // Generate a proper UUID for device_id if it's not already a UUID
+    let deviceId = body.device_id;
+    if (!deviceId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      deviceId = randomUUID();
+      console.log('🔄 Generated UUID for device_id:', deviceId);
+    }
+
     // Store health data in Supabase
     const { data, error } = await supabase
       .from('health_metrics')
       .insert([
         {
-          device_id: body.device_id,
+          device_id: deviceId,
           license_key: body.license_key,
           timestamp: body.timestamp,
           system_info: body.system_info || {},
@@ -114,7 +122,8 @@ export async function POST(request: Request) {
       message: 'Health data stored successfully',
       timestamp: new Date().toISOString(),
       data_id: data[0]?.id,
-      device_id: body.device_id
+      device_id: deviceId,
+      original_device_id: body.device_id
     })
 
   } catch (error) {

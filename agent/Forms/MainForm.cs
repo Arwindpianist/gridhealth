@@ -8,6 +8,8 @@ using System.IO;
 using System.Linq;
 using System;
 using System.Net.NetworkInformation;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace GridHealth.Agent.Forms;
 
@@ -49,6 +51,9 @@ public partial class MainForm : Form
             LastConfigured = null
         };
         
+        // Generate a unique device ID for this machine
+        _config.DeviceId = GenerateDeviceId();
+        
         // Initialize timers
         _monitoringTimer = new System.Windows.Forms.Timer();
         _monitoringTimer.Interval = 60000; // 1 minute
@@ -58,6 +63,34 @@ public partial class MainForm : Form
         _statusTimer.Interval = 5000; // 5 seconds
         _statusTimer.Tick += StatusTimer_Tick;
         _statusTimer.Start();
+    }
+    
+    private string GenerateDeviceId()
+    {
+        try
+        {
+            // Try to get a stable identifier from the machine
+            var machineName = Environment.MachineName;
+            var processorId = Environment.ProcessorCount.ToString();
+            var osVersion = Environment.OSVersion.ToString();
+            
+            // Create a hash from machine-specific information
+            using (var sha256 = SHA256.Create())
+            {
+                var input = $"{machineName}|{processorId}|{osVersion}|{Environment.UserDomainName}";
+                var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
+                
+                // Convert to GUID format (UUID v5-like)
+                var guid = new Guid(hashBytes.Take(16).ToArray());
+                return guid.ToString();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error generating device ID: {ex.Message}");
+            // Fallback to a random GUID
+            return Guid.NewGuid().ToString();
+        }
     }
 
     private void InitializeComponent()
@@ -567,6 +600,16 @@ public partial class MainForm : Form
             Location = new Point(20, 120)
         };
 
+        var deviceIdLabel = new Label
+        {
+            Name = "lblDeviceId",
+            Text = $"Device ID: {_config.DeviceId}",
+            Font = new Font("Segoe UI", 10),
+            ForeColor = Color.FromArgb(156, 163, 175), // Gray-400
+            AutoSize = true,
+            Location = new Point(20, 140)
+        };
+
         // System info preview
         var systemInfoLabel = new Label
         {
@@ -645,7 +688,7 @@ public partial class MainForm : Form
         { 
             statusTitleLabel,
             statusLabel, statusIconLabel,
-            lastScanLabel, nextScanLabel, scanCountLabel,
+            lastScanLabel, nextScanLabel, scanCountLabel, deviceIdLabel,
             systemInfoLabel, cpuLabel, memoryLabel, diskLabel, networkLabel,
             logTitleLabel, logTextBox
         });
@@ -803,6 +846,7 @@ public partial class MainForm : Form
         var monitorButton = Controls.Find("btnStartMonitoring", true).FirstOrDefault() as Button;
         var stepLabel = Controls.Find("lblOnboardingStep", true).FirstOrDefault() as Label;
         var stepDescription = Controls.Find("lblStepDescription", true).FirstOrDefault() as Label;
+        var deviceIdLabel = Controls.Find("lblDeviceId", true).FirstOrDefault() as Label;
 
         if (statusLabel != null && statusIconLabel != null)
         {
@@ -843,6 +887,12 @@ public partial class MainForm : Form
             monitorButton.Text = _isMonitoring ? "⏹️ Stop Monitoring" : "▶️ Start Monitoring";
             monitorButton.BackColor = _isMonitoring ? Color.FromArgb(200, 50, 50) : Color.FromArgb(0, 200, 100);
         }
+
+        // Update device ID display
+        if (deviceIdLabel != null)
+        {
+            deviceIdLabel.Text = $"Device ID: {_config.DeviceId}";
+        }
     }
 
     private async void BtnTestDataTransmission_Click(object? sender, EventArgs e)
@@ -866,7 +916,7 @@ public partial class MainForm : Form
             // Create test health data
             var testHealthData = new HealthData
             {
-                DeviceId = Environment.MachineName,
+                DeviceId = _config.DeviceId ?? Environment.MachineName,
                 LicenseKey = _config.LicenseKey,
                 Timestamp = DateTime.UtcNow,
                 SystemInfo = new SystemInfo
@@ -1035,7 +1085,7 @@ public partial class MainForm : Form
             // Create minimal test data for database connectivity test
             var testData = new HealthData
             {
-                DeviceId = Environment.MachineName,
+                DeviceId = _config.DeviceId ?? Environment.MachineName,
                 LicenseKey = _config.LicenseKey,
                 Timestamp = DateTime.UtcNow,
                 SystemInfo = new SystemInfo
