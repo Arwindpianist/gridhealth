@@ -89,6 +89,7 @@ export async function POST(request: Request) {
           device_id: deviceId,
           license_key: body.license_key,
           timestamp: body.timestamp,
+          metric_type: 'system_health', // Add the missing metric_type field
           system_info: body.system_info || {},
           performance_metrics: body.performance_metrics || {},
           disk_health: body.disk_health || [],

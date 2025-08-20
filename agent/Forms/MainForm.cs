@@ -22,47 +22,107 @@ public partial class MainForm : Form
 
     public MainForm()
     {
-        InitializeComponent();
-        InitializeBasicConfiguration();
-        UpdateUI();
-        
-        // Ensure form is visible and on top
-        this.Visible = true;
-        this.ShowInTaskbar = true;
-        this.WindowState = FormWindowState.Normal;
-        this.BringToFront();
-        this.Focus();
-        
-        Console.WriteLine("🎯 MainForm constructor completed");
-        Console.WriteLine($"📱 Form visible: {this.Visible}");
-        Console.WriteLine($"🪟 Window state: {this.WindowState}");
+        try
+        {
+            Console.WriteLine("🚀 Starting MainForm constructor...");
+            
+            Console.WriteLine("📝 Calling InitializeComponent...");
+            InitializeComponent();
+            Console.WriteLine("✅ InitializeComponent completed");
+            
+            Console.WriteLine("🔧 Calling InitializeBasicConfiguration...");
+            InitializeBasicConfiguration();
+            Console.WriteLine("✅ InitializeBasicConfiguration completed");
+            
+            // Ensure form is visible and on top
+            Console.WriteLine("👁️ Setting form visibility...");
+            this.Visible = true;
+            this.ShowInTaskbar = true;
+            this.WindowState = FormWindowState.Normal;
+            this.BringToFront();
+            this.Focus();
+            Console.WriteLine("✅ Form visibility set");
+            
+            // Update UI after everything is initialized
+            Console.WriteLine("🎨 Calling UpdateUI...");
+            UpdateUI();
+            Console.WriteLine("✅ UpdateUI completed");
+            
+            Console.WriteLine("🎯 MainForm constructor completed successfully");
+            Console.WriteLine($"📱 Form visible: {this.Visible}");
+            Console.WriteLine($"🪟 Window state: {this.WindowState}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ CRITICAL ERROR in MainForm constructor: {ex.Message}");
+            Console.WriteLine($"❌ Exception type: {ex.GetType().Name}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+            
+            // Try to show a simple error dialog
+            try
+            {
+                MessageBox.Show($"Critical error in MainForm constructor:\n\n{ex.Message}\n\nType: {ex.GetType().Name}\n\nCheck console for full details.", 
+                    "GridHealth Agent Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch
+            {
+                // If even the message box fails, we're in serious trouble
+                Console.WriteLine("❌ Could not even show error dialog!");
+            }
+            
+            throw; // Re-throw to prevent application from continuing in broken state
+        }
     }
     
     private void InitializeBasicConfiguration()
     {
-        // Initialize basic configuration
-        _config = new AgentConfiguration
+        try
         {
-            LicenseKey = "",
-            ApiEndpoint = "https://gridhealth.arwindpianist.store/api/health",
-            ScanFrequency = ScanFrequency.Daily,
-            ScanIntervalMinutes = 1440, // 24 hours
-            IsConfigured = false,
-            LastConfigured = null
-        };
-        
-        // Generate a unique device ID for this machine
-        _config.DeviceId = GenerateDeviceId();
-        
-        // Initialize timers
-        _monitoringTimer = new System.Windows.Forms.Timer();
-        _monitoringTimer.Interval = 60000; // 1 minute
-        _monitoringTimer.Tick += MonitoringTimer_Tick;
-        
-        _statusTimer = new System.Windows.Forms.Timer();
-        _statusTimer.Interval = 5000; // 5 seconds
-        _statusTimer.Tick += StatusTimer_Tick;
-        _statusTimer.Start();
+            // Initialize basic configuration
+            _config = new AgentConfiguration
+            {
+                LicenseKey = "",
+                ApiEndpoint = "https://gridhealth.arwindpianist.store/api/health",
+                ScanFrequency = ScanFrequency.Daily,
+                ScanIntervalMinutes = 1440, // 24 hours
+                IsConfigured = false,
+                LastConfigured = null
+            };
+            
+            // Generate a unique device ID for this machine
+            _config.DeviceId = GenerateDeviceId();
+            
+            Console.WriteLine($"🔧 Configuration initialized with Device ID: {_config.DeviceId}");
+            
+            // Initialize timers
+            _monitoringTimer = new System.Windows.Forms.Timer();
+            _monitoringTimer.Interval = 60000; // 1 minute
+            _monitoringTimer.Tick += MonitoringTimer_Tick;
+            
+            _statusTimer = new System.Windows.Forms.Timer();
+            _statusTimer.Interval = 5000; // 5 seconds
+            _statusTimer.Tick += StatusTimer_Tick;
+            _statusTimer.Start();
+            
+            Console.WriteLine("✅ Timers initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error in InitializeBasicConfiguration: {ex.Message}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+            
+            // Fallback initialization
+            _config = new AgentConfiguration
+            {
+                LicenseKey = "",
+                ApiEndpoint = "https://gridhealth.arwindpianist.store/api/health",
+                ScanFrequency = ScanFrequency.Daily,
+                ScanIntervalMinutes = 1440,
+                IsConfigured = false,
+                LastConfigured = null,
+                DeviceId = Guid.NewGuid().ToString()
+            };
+        }
     }
     
     private string GenerateDeviceId()
@@ -70,32 +130,45 @@ public partial class MainForm : Form
         try
         {
             // Try to get a stable identifier from the machine
-            var machineName = Environment.MachineName;
+            var machineName = Environment.MachineName ?? "UNKNOWN";
             var processorId = Environment.ProcessorCount.ToString();
-            var osVersion = Environment.OSVersion.ToString();
+            var osVersion = Environment.OSVersion?.ToString() ?? "UNKNOWN";
+            var domainName = Environment.UserDomainName ?? "UNKNOWN";
+            
+            Console.WriteLine($"🔍 Machine info: {machineName}, {processorId} cores, {osVersion}, {domainName}");
             
             // Create a hash from machine-specific information
             using (var sha256 = SHA256.Create())
             {
-                var input = $"{machineName}|{processorId}|{osVersion}|{Environment.UserDomainName}";
+                var input = $"{machineName}|{processorId}|{osVersion}|{domainName}";
                 var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
                 
                 // Convert to GUID format (UUID v5-like)
                 var guid = new Guid(hashBytes.Take(16).ToArray());
-                return guid.ToString();
+                var deviceId = guid.ToString();
+                
+                Console.WriteLine($"✅ Generated Device ID: {deviceId}");
+                return deviceId;
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"⚠️ Error generating device ID: {ex.Message}");
+            Console.WriteLine($"⚠️ Stack trace: {ex.StackTrace}");
+            
             // Fallback to a random GUID
-            return Guid.NewGuid().ToString();
+            var fallbackId = Guid.NewGuid().ToString();
+            Console.WriteLine($"🔄 Using fallback Device ID: {fallbackId}");
+            return fallbackId;
         }
     }
 
     private void InitializeComponent()
     {
-        this.SuspendLayout();
+        try
+        {
+            Console.WriteLine("🏗️ Starting InitializeComponent...");
+            this.SuspendLayout();
         
         // Form properties
         this.Text = "GridHealth Agent - System Health Monitor";
@@ -113,28 +186,40 @@ public partial class MainForm : Form
         };
 
         // Header with branding
+        Console.WriteLine("🏗️ Creating header panel...");
         var headerPanel = CreateHeaderPanel();
         mainPanel.Controls.Add(headerPanel);
+        Console.WriteLine("✅ Header panel created");
 
         // Configuration Instructions Panel
+        Console.WriteLine("🏗️ Creating instructions panel...");
         var instructionsPanel = CreateInstructionsPanel();
         mainPanel.Controls.Add(instructionsPanel);
+        Console.WriteLine("✅ Instructions panel created");
 
         // Configuration panel
+        Console.WriteLine("🏗️ Creating configuration panel...");
         var configPanel = CreateConfigurationPanel();
         mainPanel.Controls.Add(configPanel);
+        Console.WriteLine("✅ Configuration panel created");
 
         // Data Testing Panel
+        Console.WriteLine("🏗️ Creating data test panel...");
         var dataTestPanel = CreateDataTestPanel();
         mainPanel.Controls.Add(dataTestPanel);
+        Console.WriteLine("✅ Data test panel created");
 
         // Status panel
+        Console.WriteLine("🏗️ Creating status panel...");
         var statusPanel = CreateStatusPanel();
         mainPanel.Controls.Add(statusPanel);
+        Console.WriteLine("✅ Status panel created");
 
         // Control panel
+        Console.WriteLine("🏗️ Creating control panel...");
         var controlPanel = CreateControlPanel();
         mainPanel.Controls.Add(controlPanel);
+        Console.WriteLine("✅ Control panel created");
 
         // Layout panels
         headerPanel.Dock = DockStyle.Top;
@@ -156,6 +241,16 @@ public partial class MainForm : Form
 
         this.Controls.Add(mainPanel);
         this.ResumeLayout(false);
+        
+        Console.WriteLine("✅ InitializeComponent completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ ERROR in InitializeComponent: {ex.Message}");
+            Console.WriteLine($"❌ Exception type: {ex.GetType().Name}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+            throw;
+        }
     }
 
     private Panel CreateHeaderPanel()
@@ -603,7 +698,7 @@ public partial class MainForm : Form
         var deviceIdLabel = new Label
         {
             Name = "lblDeviceId",
-            Text = $"Device ID: {_config.DeviceId}",
+            Text = $"Device ID: {_config?.DeviceId ?? "Initializing..."}",
             Font = new Font("Segoe UI", 10),
             ForeColor = Color.FromArgb(156, 163, 175), // Gray-400
             AutoSize = true,
@@ -841,12 +936,28 @@ public partial class MainForm : Form
 
     private void UpdateUI()
     {
-        var statusLabel = Controls.Find("lblStatus", true).FirstOrDefault() as Label;
-        var statusIconLabel = Controls.Find("lblStatusIcon", true).FirstOrDefault() as Label;
-        var monitorButton = Controls.Find("btnStartMonitoring", true).FirstOrDefault() as Button;
-        var stepLabel = Controls.Find("lblOnboardingStep", true).FirstOrDefault() as Label;
-        var stepDescription = Controls.Find("lblStepDescription", true).FirstOrDefault() as Label;
-        var deviceIdLabel = Controls.Find("lblDeviceId", true).FirstOrDefault() as Label;
+        try
+        {
+            // Ensure _config is initialized
+            if (_config == null)
+            {
+                Console.WriteLine("⚠️ _config is null in UpdateUI, initializing...");
+                InitializeBasicConfiguration();
+            }
+
+            // Ensure Controls is available
+            if (Controls == null)
+            {
+                Console.WriteLine("⚠️ Controls is null in UpdateUI, skipping...");
+                return;
+            }
+
+            var statusLabel = Controls.Find("lblStatus", true).FirstOrDefault() as Label;
+            var statusIconLabel = Controls.Find("lblStatusIcon", true).FirstOrDefault() as Label;
+            var monitorButton = Controls.Find("btnStartMonitoring", true).FirstOrDefault() as Button;
+            var stepLabel = Controls.Find("lblOnboardingStep", true).FirstOrDefault() as Label;
+            var stepDescription = Controls.Find("lblStepDescription", true).FirstOrDefault() as Label;
+            var deviceIdLabel = Controls.Find("lblDeviceId", true).FirstOrDefault() as Label;
 
         if (statusLabel != null && statusIconLabel != null)
         {
@@ -892,6 +1003,12 @@ public partial class MainForm : Form
         if (deviceIdLabel != null)
         {
             deviceIdLabel.Text = $"Device ID: {_config.DeviceId}";
+        }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error in UpdateUI: {ex.Message}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
         }
     }
 
@@ -1036,7 +1153,7 @@ public partial class MainForm : Form
                     "Invalid License", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            
+
             LogMessage("Testing connection to API...");
             
             // TODO: Implement API connection test
