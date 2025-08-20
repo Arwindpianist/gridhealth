@@ -70,10 +70,10 @@ public class AgentService : BackgroundService, IAgentService
                 
                 var healthData = await _healthScanner.ScanAsync();
                 Console.WriteLine("📊 Health data collected:");
-                Console.WriteLine($"   CPU: {healthData.SystemHealth.Cpu.UsagePercent}% usage");
-                Console.WriteLine($"   Memory: {healthData.SystemHealth.Memory.UsagePercent}% usage ({healthData.SystemHealth.Memory.UsedGb:F1}GB / {healthData.SystemHealth.Memory.TotalGb:F1}GB)");
-                Console.WriteLine($"   Disks: {healthData.SystemHealth.Disks.Count} drives monitored");
-                Console.WriteLine($"   Network: {healthData.SystemHealth.Network.Status}");
+                Console.WriteLine($"   CPU: {healthData.PerformanceMetrics.CpuUsagePercent}% usage");
+                Console.WriteLine($"   Memory: {healthData.PerformanceMetrics.MemoryUsagePercent}% usage ({healthData.MemoryHealth.UsedPhysicalMemoryBytes / (1024 * 1024 * 1024):F1}GB / {healthData.MemoryHealth.TotalPhysicalMemoryBytes / (1024 * 1024 * 1024):F1}GB)");
+                Console.WriteLine($"   Disks: {healthData.DiskHealth.Count} drives monitored");
+                Console.WriteLine($"   Network: {healthData.NetworkHealth.NetworkAdapterCount} adapters");
                 
                 Console.WriteLine("📡 Attempting to send data to API...");
                 await _apiClient.SendHealthDataAsync(healthData);

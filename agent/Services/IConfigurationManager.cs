@@ -10,6 +10,7 @@ public interface IConfigurationManager
     Task<string?> GetOrganizationTokenAsync();
     Task<string?> GetDeviceIdAsync();
     Task<string?> GetOrganizationIdAsync();
+    Task<string?> GetLicenseKeyAsync();
     Task<string?> GetApiEndpointAsync();
     Task<int> GetScanIntervalMinutesAsync();
     Task<bool> ValidateConfigurationAsync();

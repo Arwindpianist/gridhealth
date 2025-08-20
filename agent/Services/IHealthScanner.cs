@@ -5,8 +5,13 @@ namespace GridHealth.Agent.Services;
 public interface IHealthScanner
 {
     Task<HealthData> ScanAsync();
-    Task<SystemHealth> GetSystemHealthAsync();
-    Task<ApplicationHealth> GetApplicationHealthAsync();
+    Task<SystemInfo> GetSystemInfoAsync();
+    Task<PerformanceMetrics> GetPerformanceMetricsAsync();
+    Task<List<DiskHealth>> GetDiskHealthAsync();
+    Task<MemoryHealth> GetMemoryHealthAsync();
+    Task<NetworkHealth> GetNetworkHealthAsync();
+    Task<List<ServiceHealth>> GetServiceHealthAsync();
+    Task<SecurityHealth> GetSecurityHealthAsync();
     Task<bool> IsHealthyAsync();
     Task<TimeSpan> GetLastScanDurationAsync();
 } 

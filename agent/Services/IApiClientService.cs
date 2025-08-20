@@ -5,4 +5,5 @@ namespace GridHealth.Agent.Services;
 public interface IApiClientService
 {
     Task<bool> SendHealthDataAsync(HealthData healthData);
+    Task<bool> TestConnectionAsync(string endpoint);
 } 

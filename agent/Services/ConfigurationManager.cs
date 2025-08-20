@@ -167,6 +167,12 @@ public class ConfigurationManager : IConfigurationManager
         return config.OrganizationId;
     }
 
+    public async Task<string?> GetLicenseKeyAsync()
+    {
+        var config = await LoadConfigurationAsync();
+        return config.LicenseKey;
+    }
+
     public async Task<string?> GetApiEndpointAsync()
     {
         var config = await LoadConfigurationAsync();

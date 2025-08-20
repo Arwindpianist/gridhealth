@@ -1,149 +1,48 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.Json;
-using Microsoft.Extensions.Configuration.EnvironmentVariables;
-using Microsoft.Extensions.Configuration.CommandLine;
-using GridHealth.Agent.Services;
-using GridHealth.Agent.Models;
+using System;
+using System.Windows.Forms;
+using GridHealth.Agent.Forms;
 
-namespace GridHealth.Agent;
-
-static class Program
+namespace GridHealth.Agent
 {
-    static Program()
+    static class Program
     {
-        // Static constructor to test if the class loads
-        Console.WriteLine("🔧 Program class loaded!");
-    }
-
-    static async Task Main(string[] args)
-    {
-        try
+        [STAThread]
+        static void Main(string[] args)
         {
-            Console.WriteLine("🎯 GridHealth Agent starting...");
-            Console.WriteLine($"📝 Arguments: {string.Join(", ", args)}");
-            Console.WriteLine($"🔍 Contains --console: {args.Contains("--console")}");
-            Console.WriteLine($"🔍 Contains /console: {args.Contains("/console")}");
-            
-            // Force console output to flush
-            Console.Out.Flush();
-            
-            // Check if running as service or console
-            if (args.Contains("--console") || args.Contains("/console"))
+            try
             {
-                Console.WriteLine("🖥️  Running in CONSOLE mode");
-                // Console mode for development and testing
-                await RunAsConsole(args);
+                Console.WriteLine("🎯 GridHealth Agent starting...");
+                
+                // Set up Windows Forms application
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                
+                Console.WriteLine("🚀 Windows Forms initialized");
+                
+                // Create and run the main form
+                var mainForm = new MainForm();
+                Console.WriteLine("✅ MainForm created successfully");
+                
+                Console.WriteLine("🚀 Launching GridHealth Agent GUI...");
+                Application.Run(mainForm);
+                
+                Console.WriteLine("✅ Application completed successfully");
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("🔄 Running in SERVICE mode");
-                // Service mode for production
-                await RunAsService(args);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"❌ CRITICAL ERROR in Main: {ex.Message}");
-            Console.WriteLine($"📋 Exception details: {ex}");
-        }
-        finally
-        {
-            Console.WriteLine("🏁 Main method completed.");
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
-        }
-    }
-
-    private static async Task RunAsConsole(string[] args)
-    {
-        Console.WriteLine("GridHealth Agent - Console Mode");
-        Console.WriteLine("Starting in console mode for development...");
-        Console.WriteLine($"Arguments received: {string.Join(", ", args)}");
-        
-        var host = CreateHostBuilder(args).Build();
-        
-        try
-        {
-            Console.WriteLine("Host built successfully, getting agent service...");
-            
-            // Start the agent service
-            var agentService = host.Services.GetRequiredService<IAgentService>();
-            Console.WriteLine("Agent service retrieved, starting...");
-            
-            await agentService.StartAsync(CancellationToken.None);
-            
-            Console.WriteLine("Agent service started. Press any key to exit...");
-            Console.ReadKey();
-            
-            await agentService.StopAsync(CancellationToken.None);
-            Console.WriteLine("Agent service stopped.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to start GridHealth Agent: {ex.Message}");
-            Console.WriteLine($"Exception details: {ex}");
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
-        }
-    }
-
-    private static async Task RunAsService(string[] args)
-    {
-        try
-        {
-            var host = CreateHostBuilder(args).Build();
-            await host.RunAsync();
-        }
-        catch (Exception ex)
-        {
-            // Log error to Windows Event Log
-            var logger = LoggerFactory.Create(builder => builder.AddEventLog())
-                .CreateLogger("GridHealth.Agent");
-            logger.LogError(ex, "Failed to start GridHealth Agent service");
-            throw;
-        }
-    }
-
-    private static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .UseWindowsService(options =>
-            {
-                options.ServiceName = "GridHealth Agent";
-            })
-            .ConfigureServices((context, services) =>
-            {
-                // Configuration
-                services.Configure<AgentConfiguration>(
-                    context.Configuration.GetSection("Agent"));
-
-                // Core Services
-                services.AddSingleton<IAgentService, AgentService>();
-                services.AddSingleton<IMonitoringService, MonitoringService>();
-                services.AddSingleton<IEnrollmentService, EnrollmentService>();
-                services.AddSingleton<IHealthCollectorService, HealthCollectorService>();
-                services.AddSingleton<IApiClientService, ApiClientService>();
-                services.AddSingleton<GridHealth.Agent.Services.IConfigurationManager, GridHealth.Agent.Services.ConfigurationManager>();
-                services.AddSingleton<IHealthScanner, HealthScanner>();
-
-                // HTTP client
-                services.AddHttpClient();
-
-                // Logging
-                services.AddLogging(builder =>
+                Console.WriteLine($"❌ ERROR: {ex.Message}");
+                Console.WriteLine($"Exception details: {ex}");
+                
+                try
                 {
-                    builder.AddConsole();
-                    builder.AddEventLog();
-                });
-            })
-            .ConfigureAppConfiguration((context, config) =>
-            {
-                config.SetBasePath(Directory.GetCurrentDirectory());
-                config.AddJsonFile("appsettings.json", optional: true);
-                config.AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true);
-                config.AddEnvironmentVariables();
-                config.AddCommandLine(args);
-            });
+                    MessageBox.Show($"Error: {ex.Message}", "GridHealth Agent Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                catch
+                {
+                    // If even the error message box fails, just exit
+                }
+            }
+        }
+    }
 } 
