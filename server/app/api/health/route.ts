@@ -7,6 +7,35 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+// Calculate overall health score based on performance metrics
+function calculateHealthScore(performanceMetrics: any): number {
+  if (!performanceMetrics) return 100;
+  
+  let score = 100;
+  
+  // CPU usage penalty (0-100% usage)
+  if (performanceMetrics.cpu_usage_percent) {
+    const cpuUsage = Math.min(100, Math.max(0, performanceMetrics.cpu_usage_percent));
+    score -= (cpuUsage * 0.3); // CPU usage reduces score by up to 30 points
+  }
+  
+  // Memory usage penalty (0-100% usage)
+  if (performanceMetrics.memory_usage_percent) {
+    const memoryUsage = Math.min(100, Math.max(0, performanceMetrics.memory_usage_percent));
+    score -= (memoryUsage * 0.2); // Memory usage reduces score by up to 20 points
+  }
+  
+  // Process count penalty (if too many processes)
+  if (performanceMetrics.process_count) {
+    const processCount = performanceMetrics.process_count;
+    if (processCount > 500) score -= 10; // Penalty for high process count
+    if (processCount > 1000) score -= 20; // Higher penalty for very high process count
+  }
+  
+  // Ensure score stays within 0-100 range
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 export async function GET() {
   return NextResponse.json({
     status: 'healthy',
@@ -90,6 +119,7 @@ export async function POST(request: Request) {
           license_key: body.license_key,
           timestamp: body.timestamp,
           metric_type: 'system_health', // Add the missing metric_type field
+          value: calculateHealthScore(body.performance_metrics), // Calculate health score (0-100)
           system_info: body.system_info || {},
           performance_metrics: body.performance_metrics || {},
           disk_health: body.disk_health || [],
