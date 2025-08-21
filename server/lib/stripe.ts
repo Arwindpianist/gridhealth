@@ -7,39 +7,28 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 // GridHealth License Configuration
 export const LICENSE_CONFIG = {
-  PRICE_ID: process.env.STRIPE_PRICE_ID!,
-  PRICE_MYR: 11.00,
+  QUARTERLY_PRICE_ID: process.env.STRIPE_QUARTERLY_PRICE_ID!, // MYR 15 every 3 months
+  ANNUAL_PRICE_ID: process.env.STRIPE_ANNUAL_PRICE_ID!, // MYR 11 every 12 months (4 quarters)
   CURRENCY: 'myr',
-  BILLING_CYCLE: '3months',
-  BILLING_INTERVAL: 'month',
-  BILLING_INTERVAL_COUNT: 3,
 }
 
-// License Tiers
-export const LICENSE_TIERS = {
-  basic: {
-    name: 'Basic License',
-    devices: 10,
-    price: 11.00,
-    features: ['Real-time monitoring', 'Basic alerts', 'Personal dashboard']
+// Billing Cycles
+export const BILLING_CYCLES = {
+  quarterly: {
+    name: 'Quarterly',
+    price: 15.00,
+    interval: 'month',
+    interval_count: 3,
+    description: 'Every 3 months',
+    priceId: LICENSE_CONFIG.QUARTERLY_PRICE_ID
   },
-  standard: {
-    name: 'Standard License', 
-    devices: 50,
+  annual: {
+    name: 'Annual',
     price: 11.00,
-    features: ['Advanced monitoring', 'Team dashboards', 'Advanced alerts', 'Custom reporting']
-  },
-  professional: {
-    name: 'Professional License',
-    devices: 100,
-    price: 11.00,
-    features: ['Enterprise monitoring', 'Multi-tenant dashboards', 'Priority support', 'API access']
-  },
-  enterprise: {
-    name: 'Enterprise License',
-    devices: 500,
-    price: 11.00,
-    features: ['Unlimited monitoring', 'White-label solutions', 'Dedicated support', 'Custom integrations']
+    interval: 'month', 
+    interval_count: 12,
+    description: 'Every 12 months (Save 27%)',
+    priceId: LICENSE_CONFIG.ANNUAL_PRICE_ID
   }
 }
 
@@ -47,35 +36,38 @@ export const LICENSE_TIERS = {
 export async function createLicenseCheckoutSession(
   customerEmail: string,
   organizationId: string,
-  tier: keyof typeof LICENSE_TIERS
+  deviceCount: number,
+  billingCycle: keyof typeof BILLING_CYCLES
 ) {
-  const tierConfig = LICENSE_TIERS[tier]
+  const cycle = BILLING_CYCLES[billingCycle]
   
   const session = await stripe.checkout.sessions.create({
     customer_email: customerEmail,
     payment_method_types: ['card'],
     line_items: [
       {
-        price: LICENSE_CONFIG.PRICE_ID,
-        quantity: 1,
+        price: cycle.priceId,
+        quantity: deviceCount,
       },
     ],
     mode: 'subscription',
     subscription_data: {
       metadata: {
         organization_id: organizationId,
-        tier: tier,
-        device_limit: tierConfig.devices.toString(),
-        price_myr: tierConfig.price.toString(),
+        billing_cycle: billingCycle,
+        device_count: deviceCount.toString(),
+        price_per_device: cycle.price.toString(),
+        total_price: (cycle.price * deviceCount).toString(),
       },
     },
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/complete?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
     metadata: {
       organization_id: organizationId,
-      tier: tier,
-      device_limit: tierConfig.devices.toString(),
-      price_myr: tierConfig.price.toString(),
+      billing_cycle: billingCycle,
+      device_count: deviceCount.toString(),
+      price_per_device: cycle.price.toString(),
+      total_price: (cycle.price * deviceCount).toString(),
     },
   })
 

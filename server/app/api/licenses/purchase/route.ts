@@ -12,13 +12,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { tier } = body
+    const { devices, billingCycle } = body
 
-    if (!tier) {
-      return NextResponse.json({ error: 'Tier is required' }, { status: 400 })
+    if (!devices || devices < 1) {
+      return NextResponse.json({ error: 'Device count is required and must be at least 1' }, { status: 400 })
     }
 
-    console.log('🛒 License purchase request:', { userId, tier })
+    if (!billingCycle || !['quarterly', 'annual'].includes(billingCycle)) {
+      return NextResponse.json({ error: 'Billing cycle is required and must be quarterly or annual' }, { status: 400 })
+    }
+
+    console.log('🛒 License purchase request:', { userId, devices, billingCycle })
 
     // Get user and organization info
     const { data: user, error: userError } = await supabaseAdmin
@@ -90,7 +94,8 @@ export async function POST(request: NextRequest) {
       const session = await createLicenseCheckoutSession(
         user.email,
         virtualOrg.id,
-        tier
+        devices,
+        billingCycle
       )
 
       console.log('✅ Checkout session created for individual user:', session.id)
@@ -129,7 +134,8 @@ export async function POST(request: NextRequest) {
     const session = await createLicenseCheckoutSession(
       user.email,
       organizationId,
-      tier
+      devices,
+      billingCycle
     )
 
     console.log('✅ Checkout session created:', session.id)

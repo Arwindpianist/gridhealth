@@ -56,10 +56,11 @@ async function handleCheckoutSessionCompleted(session: any) {
   
   const {
     customer_email,
-    metadata: { organization_id, tier, device_limit, price_myr }
+    subscription: subscriptionId,
+    metadata: { organization_id, billing_cycle, device_count, price_per_device, total_price }
   } = session
 
-  if (!organization_id || !tier) {
+  if (!organization_id || !device_count || !billing_cycle) {
     console.error('❌ Missing metadata in session:', session.metadata)
     return
   }
@@ -68,15 +69,16 @@ async function handleCheckoutSessionCompleted(session: any) {
     // Generate unique license key
     const licenseKey = generateLicenseKey()
     
-    console.log('🔑 Generating license:', {
+    console.log('🔑 Processing license purchase:', {
       licenseKey,
       organization_id,
-      tier,
-      device_limit,
-      price_myr
+      billing_cycle,
+      device_count,
+      price_per_device,
+      total_price
     })
 
-    // Check if organization already has a license
+    // Check if organization already has an active license
     const { data: existingLicense, error: existingError } = await supabaseAdmin
       .from('licenses')
       .select('*')
@@ -90,14 +92,16 @@ async function handleCheckoutSessionCompleted(session: any) {
     if (existingLicense) {
       // Update existing license with additional devices
       console.log('🔄 Updating existing license with additional devices')
-      const newDeviceLimit = existingLicense.device_limit + parseInt(device_limit)
+      const newDeviceLimit = existingLicense.device_limit + parseInt(device_count)
       
       const { data: updatedLicense, error: updateError } = await supabaseAdmin
         .from('licenses')
         .update({
           device_limit: newDeviceLimit,
-          price_myr: existingLicense.price_myr + parseFloat(price_myr),
-          expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+          price_myr: parseFloat(total_price),
+          billing_cycle: billing_cycle,
+          stripe_subscription_id: subscriptionId,
+          expires_at: calculateExpiryDate(billing_cycle),
           updated_at: new Date().toISOString()
         })
         .eq('id', existingLicense.id)
@@ -116,13 +120,13 @@ async function handleCheckoutSessionCompleted(session: any) {
         .insert({
           organization_id: organization_id,
           license_key: licenseKey,
-          device_limit: parseInt(device_limit),
-          price_myr: parseFloat(price_myr),
+          device_limit: parseInt(device_count),
+          price_myr: parseFloat(total_price),
           status: 'active',
-          tier: tier,
-          stripe_subscription_id: session.subscription,
+          billing_cycle: billing_cycle,
+          stripe_subscription_id: subscriptionId,
           stripe_customer_id: session.customer,
-          expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+          expires_at: calculateExpiryDate(billing_cycle),
           created_at: new Date().toISOString()
         })
         .select()
@@ -133,20 +137,20 @@ async function handleCheckoutSessionCompleted(session: any) {
     }
 
     if (licenseError) {
-      console.error('❌ Error creating license:', licenseError)
+      console.error('❌ Error creating/updating license:', licenseError)
       return
     }
 
-    console.log('✅ License created:', license.id)
+    console.log('✅ License processed successfully:', license.id)
 
     // Update organization with license info
     const { error: orgError } = await supabaseAdmin
       .from('organizations')
       .update({
-        device_limit: license.device_limit, // Use the aggregated device limit
+        device_limit: license.device_limit,
         subscription_status: 'active',
-        subscription_tier: tier,
-        subscription_expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        subscription_tier: billing_cycle,
+        subscription_expires_at: license.expires_at,
         license_id: license.id,
         updated_at: new Date().toISOString()
       })
@@ -159,9 +163,6 @@ async function handleCheckoutSessionCompleted(session: any) {
 
     console.log('✅ Organization updated with license info')
 
-    // Send email notification (future implementation)
-    // await sendLicenseEmail(customer_email, licenseKey, tier, device_limit)
-
   } catch (error) {
     console.error('💥 Error in checkout session handler:', error)
   }
@@ -170,8 +171,6 @@ async function handleCheckoutSessionCompleted(session: any) {
 async function handleInvoicePaymentSucceeded(invoice: any) {
   console.log('💰 Invoice payment succeeded:', invoice.id)
   
-  // Handle recurring payments for existing subscriptions
-  // This ensures licenses are renewed automatically
   try {
     const subscriptionId = invoice.subscription
     
@@ -187,8 +186,8 @@ async function handleInvoicePaymentSucceeded(invoice: any) {
       return
     }
 
-    // Extend license expiration
-    const newExpiry = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+    // Extend license expiration based on billing cycle
+    const newExpiry = calculateExpiryDate(license.billing_cycle)
     
     const { error: updateError } = await supabaseAdmin
       .from('licenses')
@@ -238,17 +237,42 @@ async function handleSubscriptionDeleted(subscription: any) {
     }
 
     // Update organization subscription status
-    await supabaseAdmin
-      .from('organizations')
-      .update({
-        subscription_status: 'inactive',
-        updated_at: new Date().toISOString()
-      })
-      .eq('license_id', subscription.id)
+    const { data: license } = await supabaseAdmin
+      .from('licenses')
+      .select('organization_id')
+      .eq('stripe_subscription_id', subscription.id)
+      .single()
+
+    if (license) {
+      await supabaseAdmin
+        .from('organizations')
+        .update({
+          subscription_status: 'inactive',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', license.organization_id)
+    }
 
     console.log('✅ License deactivated for subscription:', subscription.id)
 
   } catch (error) {
     console.error('💥 Error in subscription deletion handler:', error)
+  }
+}
+
+// Calculate expiry date based on billing cycle
+function calculateExpiryDate(billingCycle: string): Date {
+  const now = new Date()
+  
+  switch (billingCycle) {
+    case 'quarterly':
+      // 3 months from now
+      return new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
+    case 'annual':
+      // 12 months from now
+      return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
+    default:
+      // Default to 3 months
+      return new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
   }
 } 
