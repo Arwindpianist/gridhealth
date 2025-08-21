@@ -78,19 +78,29 @@ public partial class MainForm : Form
     {
         try
         {
-            // Initialize basic configuration
-            _config = new AgentConfiguration
-            {
-                LicenseKey = "",
-                ApiEndpoint = "https://gridhealth.arwindpianist.store/api/health",
-                ScanFrequency = ScanFrequency.Daily,
-                ScanIntervalMinutes = 1440, // 24 hours
-                IsConfigured = false,
-                LastConfigured = null
-            };
+            // Try to load existing configuration
+            _config = LoadConfiguration();
             
-            // Generate a unique device ID for this machine
-            _config.DeviceId = GenerateDeviceId();
+            // If no existing config, create new one
+            if (_config == null)
+            {
+                _config = new AgentConfiguration
+                {
+                    LicenseKey = "",
+                    ApiEndpoint = "https://gridhealth.arwindpianist.store/api/health",
+                    ScanFrequency = ScanFrequency.Daily,
+                    ScanIntervalMinutes = 1440, // 24 hours
+                    IsConfigured = false,
+                    LastConfigured = null
+                };
+            }
+            
+            // Generate a unique device ID for this machine (if not already set)
+            if (string.IsNullOrEmpty(_config.DeviceId))
+            {
+                _config.DeviceId = GenerateDeviceId();
+                SaveConfiguration(); // Save the new device ID
+            }
             
             Console.WriteLine($"🔧 Configuration initialized with Device ID: {_config.DeviceId}");
             
@@ -129,25 +139,47 @@ public partial class MainForm : Form
     {
         try
         {
-            // Try to get a stable identifier from the machine
+            // Get unique machine identifiers
             var machineName = Environment.MachineName ?? "UNKNOWN";
             var processorId = Environment.ProcessorCount.ToString();
             var osVersion = Environment.OSVersion?.ToString() ?? "UNKNOWN";
             var domainName = Environment.UserDomainName ?? "UNKNOWN";
             
-            Console.WriteLine($"🔍 Machine info: {machineName}, {processorId} cores, {osVersion}, {domainName}");
+            // Get additional unique identifiers
+            var userName = Environment.UserName ?? "UNKNOWN";
+            var userDomain = Environment.UserDomainName ?? "UNKNOWN";
+            var systemDirectory = Environment.SystemDirectory ?? "UNKNOWN";
             
-            // Create a hash from machine-specific information
+            // Get MAC address (if possible)
+            string macAddress = "UNKNOWN";
+            try
+            {
+                var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+                var firstInterface = networkInterfaces.FirstOrDefault(ni => ni.OperationalStatus == OperationalStatus.Up && 
+                                                                          ni.NetworkInterfaceType != NetworkInterfaceType.Loopback);
+                if (firstInterface != null)
+                {
+                    macAddress = string.Join(":", (from z in firstInterface.GetPhysicalAddress().GetAddressBytes() select z.ToString("X2")).ToArray());
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Could not get MAC address: {ex.Message}");
+            }
+            
+            Console.WriteLine($"🔍 Machine info: {machineName}, {processorId} cores, {osVersion}, {domainName}, {userName}, {macAddress}");
+            
+            // Create a more unique hash from machine-specific information
             using (var sha256 = SHA256.Create())
             {
-                var input = $"{machineName}|{processorId}|{osVersion}|{domainName}";
+                var input = $"{machineName}|{processorId}|{osVersion}|{domainName}|{userName}|{macAddress}|{systemDirectory}";
                 var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
                 
                 // Convert to GUID format (UUID v5-like)
                 var guid = new Guid(hashBytes.Take(16).ToArray());
                 var deviceId = guid.ToString();
                 
-                Console.WriteLine($"✅ Generated Device ID: {deviceId}");
+                Console.WriteLine($"✅ Generated unique Device ID: {deviceId}");
                 return deviceId;
             }
         }
@@ -160,9 +192,68 @@ public partial class MainForm : Form
             var fallbackId = Guid.NewGuid().ToString();
             Console.WriteLine($"🔄 Using fallback Device ID: {fallbackId}");
             return fallbackId;
+                }
+    }
+    
+    private string GetConfigFilePath()
+    {
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var gridHealthPath = Path.Combine(appDataPath, "GridHealth");
+        
+        // Create directory if it doesn't exist
+        if (!Directory.Exists(gridHealthPath))
+        {
+            Directory.CreateDirectory(gridHealthPath);
+        }
+        
+        return Path.Combine(gridHealthPath, "agent-config.json");
+    }
+    
+    private AgentConfiguration? LoadConfiguration()
+    {
+        try
+        {
+            var configPath = GetConfigFilePath();
+            if (!File.Exists(configPath))
+            {
+                Console.WriteLine("📝 No existing configuration found, will create new one");
+                return null;
+            }
+            
+            var jsonContent = File.ReadAllText(configPath);
+            var config = System.Text.Json.JsonSerializer.Deserialize<AgentConfiguration>(jsonContent);
+            
+            Console.WriteLine("📝 Configuration loaded from file");
+            return config;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error loading configuration: {ex.Message}");
+            return null;
         }
     }
-
+    
+    private void SaveConfiguration()
+    {
+        try
+        {
+            if (_config == null) return;
+            
+            var configPath = GetConfigFilePath();
+            var jsonContent = System.Text.Json.JsonSerializer.Serialize(_config, new System.Text.Json.JsonSerializerOptions 
+            { 
+                WriteIndented = true 
+            });
+            
+            File.WriteAllText(configPath, jsonContent);
+            Console.WriteLine("💾 Configuration saved to file");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving configuration: {ex.Message}");
+        }
+    }
+    
     private void InitializeComponent()
     {
         try
@@ -895,20 +986,7 @@ public partial class MainForm : Form
         return null;
     }
 
-    private void LoadConfiguration()
-    {
-        try
-        {
-            // TODO: Load configuration from file
-        Console.WriteLine("Configuration loading not yet implemented");
-            UpdateConfigurationUI();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: Failed to load configuration: {ex.Message}");
-            _config = new AgentConfiguration();
-        }
-    }
+
 
     private void UpdateConfigurationUI()
     {
@@ -1506,8 +1584,8 @@ public partial class MainForm : Form
             _config.LastConfigured = DateTime.Now;
             _config.UpdateScanInterval();
 
-            // TODO: Save configuration to file
-        Console.WriteLine("Configuration saving not yet implemented");
+            // Save configuration to file
+            SaveConfiguration();
             
             LogMessage("✅ Configuration saved successfully!");
             UpdateUI();

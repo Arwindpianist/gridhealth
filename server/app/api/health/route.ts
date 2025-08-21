@@ -110,6 +110,65 @@ export async function POST(request: Request) {
       console.log('🔄 Generated UUID for device_id:', deviceId);
     }
 
+    // Check if device exists, if not register it
+    const { data: existingDevice, error: deviceCheckError } = await supabase
+      .from('devices')
+      .select('device_id, last_seen')
+      .eq('device_id', deviceId)
+      .single();
+
+    if (deviceCheckError && deviceCheckError.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error('❌ Error checking device:', deviceCheckError);
+      return NextResponse.json(
+        { error: 'Failed to check device registration' },
+        { status: 500 }
+      );
+    }
+
+    if (!existingDevice) {
+      // Register new device
+      console.log('🆕 Registering new device:', deviceId);
+      
+      const { error: deviceInsertError } = await supabase
+        .from('devices')
+        .insert([
+          {
+            device_id: deviceId,
+            license_key: body.license_key,
+            device_name: body.system_info?.hostname || 'Unknown Device',
+            device_type: 'workstation',
+            os_name: body.system_info?.os_name || 'Unknown OS',
+            os_version: body.system_info?.os_version || 'Unknown Version',
+            hostname: body.system_info?.hostname || 'Unknown Hostname',
+            mac_address: body.system_info?.mac_address || null,
+            ip_address: body.system_info?.ip_address || null
+          }
+        ]);
+
+      if (deviceInsertError) {
+        console.error('❌ Failed to register device:', deviceInsertError);
+        return NextResponse.json(
+          { error: 'Failed to register device' },
+          { status: 500 }
+        );
+      }
+
+      console.log('✅ Device registered successfully');
+    } else {
+      // Update last_seen for existing device
+      console.log('🔄 Updating last_seen for existing device:', deviceId);
+      
+      const { error: updateError } = await supabase
+        .from('devices')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('device_id', deviceId);
+
+      if (updateError) {
+        console.warn('⚠️ Failed to update last_seen:', updateError);
+        // Continue anyway, this is not critical
+      }
+    }
+
     // Store health data in Supabase
     const { data, error } = await supabase
       .from('health_metrics')
