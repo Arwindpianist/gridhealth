@@ -100,11 +100,18 @@ export default function DownloadPage() {
 
   const fetchAgentVersion = async () => {
     try {
+      console.log('Fetching agent version...')
       const response = await fetch('/api/agent/version')
+      console.log('Agent version response status:', response.status)
       
       if (response.ok) {
         const data = await response.json()
+        console.log('Agent version data received:', data)
         setAgentVersion(data.latest)
+      } else {
+        console.error('Agent version API error:', response.status, response.statusText)
+        const errorText = await response.text()
+        console.error('Error response:', errorText)
       }
     } catch (error) {
       console.error('Error fetching agent version:', error)
@@ -124,10 +131,18 @@ export default function DownloadPage() {
   }
 
   const downloadAgentFile = () => {
-    if (!agentVersion) return
+    console.log('downloadAgentFile called, agentVersion:', agentVersion)
+    
+    if (!agentVersion) {
+      console.error('No agent version available for download')
+      alert('No agent version information available. Please refresh the page.')
+      return
+    }
     
     // Download the actual GridHealth Agent package
     const downloadUrl = `https://gridhealth.arwindpianist.store${agentVersion.downloadUrl}`
+    console.log('Download URL:', downloadUrl)
+    console.log('File name:', agentVersion.fileName)
     
     const a = document.createElement('a')
     a.href = downloadUrl
@@ -136,6 +151,8 @@ export default function DownloadPage() {
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
+    
+    console.log('Download initiated')
   }
 
   if (isLoading) {
@@ -360,6 +377,44 @@ export default function DownloadPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+            
+            {/* Fallback download section when no agent version is available */}
+            {!agentVersion && (
+              <div className="mt-6 p-4 bg-yellow-900 border border-yellow-700 rounded-lg">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-yellow-200 mb-2">⚠️ Agent Version Information Unavailable</h3>
+                  <p className="text-yellow-300 mb-4">
+                    Unable to fetch the latest agent version information. You can still download the agent manually.
+                  </p>
+                  <div className="space-y-2">
+                    <p className="text-yellow-200 text-sm">
+                      <strong>Latest Version:</strong> v1.0.1 (Fixed license validation)
+                    </p>
+                    <p className="text-yellow-200 text-sm">
+                      <strong>File Size:</strong> ~73 MB
+                    </p>
+                    <p className="text-yellow-200 text-sm">
+                      <strong>Release Date:</strong> August 21, 2025
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const downloadUrl = 'https://gridhealth.arwindpianist.store/api/download/agent/v1.0.1'
+                      const a = document.createElement('a')
+                      a.href = downloadUrl
+                      a.download = 'GridHealth-Agent-v1.0.1.zip'
+                      a.target = '_blank'
+                      document.body.appendChild(a)
+                      a.click()
+                      document.body.removeChild(a)
+                    }}
+                    className="mt-4 bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2 rounded-lg transition-colors"
+                  >
+                    Download v1.0.1 (Fallback)
+                  </button>
+                </div>
               </div>
             )}
           </div>

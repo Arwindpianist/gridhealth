@@ -13,10 +13,41 @@ interface AgentVersion {
 
 export async function GET(request: NextRequest) {
   try {
-    const agentReleasePath = join(process.cwd(), '..', 'agent', 'release')
+    // Try multiple path resolution methods
+    const possiblePaths = [
+      join(process.cwd(), '..', 'agent', 'release'),
+      join(process.cwd(), 'agent', 'release'),
+      join(__dirname, '..', '..', '..', '..', 'agent', 'release'),
+      'C:/Users/arwin/Desktop/ADPMC/gridhealth/agent/release' // Fallback absolute path
+    ]
+    
+    let agentReleasePath = ''
+    let releases = []
+    
+    for (const path of possiblePaths) {
+      try {
+        console.log(`Trying path: ${path}`)
+        if (readdirSync(path, { withFileTypes: true }).some(dirent => dirent.isDirectory() && dirent.name.startsWith('GridHealth-Agent-'))) {
+          agentReleasePath = path
+          console.log(`Found agent releases at: ${path}`)
+          break
+        }
+      } catch (error) {
+        console.log(`Path ${path} not accessible:`, error instanceof Error ? error.message : String(error))
+        continue
+      }
+    }
+    
+    if (!agentReleasePath) {
+      console.error('No accessible agent release path found')
+      return NextResponse.json(
+        { error: 'No accessible agent release directory found' },
+        { status: 404 }
+      )
+    }
     
     // Get all directories in the release folder
-    const releases = readdirSync(agentReleasePath, { withFileTypes: true })
+    releases = readdirSync(agentReleasePath, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory() && dirent.name.startsWith('GridHealth-Agent-'))
       .map(dirent => {
         const version = dirent.name.replace('GridHealth-Agent-', '')
@@ -41,6 +72,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => compareVersions(b.version, a.version)) // Sort by version (newest first)
 
     if (releases.length === 0) {
+      console.error('No agent releases found in directory')
       return NextResponse.json(
         { error: 'No agent releases found' },
         { status: 404 }
@@ -48,6 +80,7 @@ export async function GET(request: NextRequest) {
     }
 
     const latestVersion = releases[0]
+    console.log(`Latest version found: ${latestVersion.version}`)
     
     return NextResponse.json({
       latest: latestVersion,
