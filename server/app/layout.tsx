@@ -28,7 +28,7 @@ export const metadata: Metadata = {
       { url: '/favicon.svg', type: 'image/svg+xml' }
     ],
     apple: [
-      { url: '/favicon.ico', sizes: '180x180', type: 'image/png' }
+      { url: '/favicon.ico', sizes: '180x180', type: 'image/x-icon' }
     ],
     shortcut: '/favicon.ico',
   },
@@ -89,6 +89,11 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'default',
     title: 'GridHealth',
+  },
+
+  // Mobile web app
+  other: {
+    'mobile-web-app-capable': 'yes',
   },
 
   // Other

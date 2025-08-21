@@ -25,7 +25,7 @@
     {
       "src": "/favicon.ico",
       "sizes": "180x180",
-      "type": "image/png",
+      "type": "image/x-icon",
       "purpose": "any maskable"
     }
   ],
