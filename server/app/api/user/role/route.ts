@@ -66,21 +66,44 @@ export async function GET(request: NextRequest) {
     // Determine if profile is complete based on role and required data
     let isComplete = false
     
-    if (user.first_name && user.last_name && userRole?.role) {
+    if (user.first_name && user.last_name && user.phone && userRole?.role) {
       if (userRole.role === 'individual') {
-        // Individual users are complete if they have name and role
+        // Individual users are complete if they have all basic info
         isComplete = true
       } else if (userRole.role === 'organization' && userRole.organization_id && organizationData) {
-        // Organization users need organization details
-        isComplete = true
+        // Organization users need complete organization details
+        const orgComplete = organizationData.name && 
+                           organizationData.description && 
+                           organizationData.contact_email && 
+                           organizationData.contact_phone
+        isComplete = orgComplete
       } else if (userRole.role === 'company' && userRole.company_id && companyData) {
-        // Company users need company details
-        isComplete = true
+        // Company users need complete company details
+        const companyComplete = companyData.name && 
+                               companyData.email && 
+                               companyData.phone && 
+                               companyData.address
+        isComplete = companyComplete
       } else if (userRole.role === 'admin') {
-        // Admin users are complete if they have name and role
+        // Admin users are complete if they have all basic info
         isComplete = true
       }
     }
+
+    console.log('🔍 Profile completion check:', {
+      userId: user.id,
+      hasName: !!(user.first_name && user.last_name),
+      hasPhone: !!user.phone,
+      hasRole: !!userRole?.role,
+      role: userRole?.role,
+      hasOrgData: !!organizationData,
+      hasCompanyData: !!companyData,
+      orgComplete: userRole?.role === 'organization' ? 
+        !!(organizationData?.name && organizationData?.description && organizationData?.contact_email && organizationData?.contact_phone) : null,
+      companyComplete: userRole?.role === 'company' ? 
+        !!(companyData?.name && companyData?.email && companyData?.phone && companyData?.address) : null,
+      isComplete: isComplete
+    })
 
     return NextResponse.json({
       success: true,

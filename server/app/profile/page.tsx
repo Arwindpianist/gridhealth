@@ -111,19 +111,56 @@ export default function ProfilePage() {
   }
 
   const saveProfile = async () => {
-    if (!profile.first_name.trim() || !profile.last_name.trim()) {
-      setMessage('First name and last name are required')
-      return
+    // Comprehensive validation for all required fields
+    const errors = []
+    
+    // Personal information validation
+    if (!profile.first_name.trim()) {
+      errors.push('First name is required')
+    }
+    if (!profile.last_name.trim()) {
+      errors.push('Last name is required')
+    }
+    if (!profile.phone.trim()) {
+      errors.push('Phone number is required')
     }
 
-    // Validate company/organization name if selected
-    if (profile.account_type === 'company' && !profile.company_name?.trim()) {
-      setMessage('Company name is required for company accounts')
-      return
+    // Account type specific validation
+    if (profile.account_type === 'company') {
+      if (!profile.company_name?.trim()) {
+        errors.push('Company name is required')
+      }
+      if (!profile.address?.trim()) {
+        errors.push('Company address is required')
+      }
+      if (!profile.contact_email?.trim()) {
+        errors.push('Company contact email is required')
+      }
+      if (!profile.contact_phone?.trim()) {
+        errors.push('Company contact phone is required')
+      }
     }
 
-    if (profile.account_type === 'organization' && !profile.organization_name?.trim()) {
-      setMessage('Organization name is required for organization accounts')
+    if (profile.account_type === 'organization') {
+      if (!profile.organization_name?.trim()) {
+        errors.push('Organization name is required')
+      }
+      if (!profile.description?.trim()) {
+        errors.push('Organization description is required')
+      }
+      if (!profile.address?.trim()) {
+        errors.push('Organization address is required')
+      }
+      if (!profile.contact_email?.trim()) {
+        errors.push('Organization contact email is required')
+      }
+      if (!profile.contact_phone?.trim()) {
+        errors.push('Organization contact phone is required')
+      }
+    }
+
+    if (errors.length > 0) {
+      setMessage(`Please complete all required fields: ${errors.join(', ')}`)
       return
     }
 
@@ -212,7 +249,7 @@ export default function ProfilePage() {
               </div>
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Phone Number (Optional)
+                  Phone Number *
                 </label>
                 <input
                   type="tel"
@@ -294,7 +331,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Description (Optional)
+                      Description *
                     </label>
                     <textarea
                       value={profile.description}
@@ -306,7 +343,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Address (Optional)
+                      Address *
                     </label>
                     <input
                       type="text"
@@ -319,7 +356,7 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Contact Email (Optional)
+                        Contact Email *
                       </label>
                       <input
                         type="email"
@@ -331,7 +368,7 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Contact Phone (Optional)
+                        Contact Phone *
                       </label>
                       <input
                         type="tel"
@@ -365,7 +402,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Address (Optional)
+                      Address *
                     </label>
                     <input
                       type="text"
@@ -378,7 +415,7 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Contact Email (Optional)
+                        Contact Email *
                       </label>
                       <input
                         type="email"
@@ -390,7 +427,7 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Contact Phone (Optional)
+                        Contact Phone *
                       </label>
                       <input
                         type="tel"
