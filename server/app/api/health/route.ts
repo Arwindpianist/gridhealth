@@ -141,7 +141,8 @@ export async function POST(request: Request) {
             os_version: body.system_info?.os_version || 'Unknown Version',
             hostname: body.system_info?.hostname || 'Unknown Hostname',
             mac_address: body.system_info?.mac_address || null,
-            ip_address: body.system_info?.ip_address || null
+            ip_address: body.system_info?.ip_address || null,
+            is_active: true
           }
         ]);
 
@@ -155,18 +156,33 @@ export async function POST(request: Request) {
 
       console.log('✅ Device registered successfully');
     } else {
-      // Update last_seen for existing device
+      // Update last_seen and is_active for existing device
       console.log('🔄 Updating last_seen for existing device:', deviceId);
       
       const { error: updateError } = await supabase
         .from('devices')
-        .update({ last_seen: new Date().toISOString() })
+        .update({ 
+          last_seen: new Date().toISOString(),
+          is_active: true
+        })
         .eq('device_id', deviceId);
 
       if (updateError) {
         console.warn('⚠️ Failed to update last_seen:', updateError);
         // Continue anyway, this is not critical
       }
+    }
+
+    // If this is just a heartbeat (no full health data), return early
+    if (body.heartbeat === true) {
+      console.log('💓 Heartbeat received from device:', deviceId);
+      return NextResponse.json({
+        status: 'success',
+        message: 'Heartbeat received',
+        device_id: deviceId,
+        timestamp: new Date().toISOString(),
+        type: 'heartbeat'
+      });
     }
 
     // Store health data in Supabase

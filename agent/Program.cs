@@ -91,7 +91,7 @@ namespace GridHealth.Agent
         {
             try
             {
-                Console.WriteLine("🚀 Starting GridHealth Agent as GUI application...");
+                Console.WriteLine("🚀 Starting GridHealth Agent as System Tray application...");
                 
                 // Set up Windows Forms application
                 Application.EnableVisualStyles();
@@ -99,18 +99,18 @@ namespace GridHealth.Agent
                 
                 Console.WriteLine("✅ Windows Forms initialized");
                 
-                // Create and run the main form
-                var mainForm = new MainForm();
-                Console.WriteLine("✅ MainForm created successfully");
+                // Create and run the system tray form
+                var systemTrayForm = new SystemTrayForm();
+                Console.WriteLine("✅ SystemTrayForm created successfully");
                 
-                Console.WriteLine("🚀 Launching GridHealth Agent GUI...");
-                Application.Run(mainForm);
+                Console.WriteLine("🚀 Launching GridHealth Agent in System Tray...");
+                Application.Run(systemTrayForm);
                 
                 Console.WriteLine("✅ Application completed successfully");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error running as GUI: {ex.Message}");
+                Console.WriteLine($"❌ Error running as system tray: {ex.Message}");
                 throw;
             }
         }

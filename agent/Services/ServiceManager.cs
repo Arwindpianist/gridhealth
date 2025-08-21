@@ -35,16 +35,18 @@ namespace GridHealth.Agent.Services
         {
             try
             {
+                // Ensure the path is properly quoted and the --service argument is included
+                string binPath = $"\"{executablePath}\" --service";
+                
                 // Use sc.exe to install the service
                 var startInfo = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "sc.exe",
-                    Arguments = $"create \"{ServiceName}\" binPath= \"{executablePath} --service\" start= auto DisplayName= \"GridHealth Agent Service\"",
+                    Arguments = $"create \"{ServiceName}\" binPath= {binPath} start= auto DisplayName= \"GridHealth Agent Service\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    Verb = "runas" // Request admin privileges
+                    CreateNoWindow = true
                 };
 
                 using (var process = System.Diagnostics.Process.Start(startInfo))

@@ -264,12 +264,28 @@ namespace GridHealth.Agent.Forms
                     // Get the executable path
                     string executablePath = Path.Combine(System.AppContext.BaseDirectory, "GridHealth.Agent.exe");
                     
-                    progressForm.UpdateProgress("Installing GridHealth Agent service...", 25);
+                    // Verify the executable exists
+                    if (!File.Exists(executablePath))
+                    {
+                        progressForm.Close();
+                        MessageBox.Show(
+                            $"GridHealth.Agent.exe not found at:\n{executablePath}\n\n" +
+                            "Please ensure the application is properly installed.",
+                            "Executable Not Found",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return;
+                    }
+                    
+                    progressForm.UpdateProgress($"Installing GridHealth Agent service...\nPath: {executablePath}", 25);
                     
                     // Install the service
                     if (ServiceManager.InstallService(executablePath))
                     {
                         progressForm.UpdateProgress("Service installed successfully! Starting service...", 75);
+                        
+                        // Wait a moment for service to be fully registered
+                        await Task.Delay(2000);
                         
                         // Start the service
                         if (ServiceManager.StartService())
@@ -304,8 +320,12 @@ namespace GridHealth.Agent.Forms
                         {
                             progressForm.Close();
                             MessageBox.Show(
-                                "Service installed but failed to start. Please check Windows Services " +
-                                "and start the 'GridHealthAgent' service manually.",
+                                "Service installed but failed to start.\n\n" +
+                                "Troubleshooting steps:\n" +
+                                "1. Check Windows Services (services.msc)\n" +
+                                "2. Look for 'GridHealthAgent' service\n" +
+                                "3. Check the service properties for errors\n" +
+                                "4. Try starting the service manually",
                                 "Service Start Failed",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Warning);
@@ -315,8 +335,12 @@ namespace GridHealth.Agent.Forms
                     {
                         progressForm.Close();
                         MessageBox.Show(
-                            "Failed to install the GridHealth Agent service. Please ensure you have " +
-                            "administrator privileges and try again.",
+                            "Failed to install the GridHealth Agent service.\n\n" +
+                            "Common causes:\n" +
+                            "• Insufficient administrator privileges\n" +
+                            "• Service already exists with different configuration\n" +
+                            "• Path contains invalid characters\n\n" +
+                            "Please try running the application as Administrator.",
                             "Service Installation Failed",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error);
