@@ -64,7 +64,7 @@ export default function DownloadPage() {
       ogTitle.setAttribute('content', title)
     }
     
-    const ogDescription = document.querySelector('meta[name="property="og:description"]')
+    const ogDescription = document.querySelector('meta[property="og:description"]')
     if (ogDescription) {
       ogDescription.setAttribute('content', metaDescription?.getAttribute('content') || '')
     }
