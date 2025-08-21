@@ -46,8 +46,25 @@ if not exist "%APPDATA_DIR%\config" mkdir "%APPDATA_DIR%\config"
 REM Copy application files
 echo Copying application files...
 copy "GridHealth.Agent.exe" "%INSTALL_DIR%\" >nul
+if %errorLevel% neq 0 (
+    echo ERROR: Failed to copy GridHealth.Agent.exe
+    echo Please ensure the executable is in the same directory as this installer
+    pause
+    exit /b 1
+)
+
 if exist "assets" xcopy "assets" "%INSTALL_DIR%\assets\" /E /I /Y >nul
 if exist "schemas" xcopy "schemas" "%INSTALL_DIR%\schemas\" /E /I /Y >nul
+
+REM Verify files were copied
+echo Verifying installation...
+if not exist "%INSTALL_DIR%\GridHealth.Agent.exe" (
+    echo ERROR: GridHealth.Agent.exe not found in installation directory
+    echo Installation failed!
+    pause
+    exit /b 1
+)
+echo ✅ Application files verified
 
 REM Create startup shortcut
 echo Creating startup shortcut...
@@ -116,7 +133,18 @@ echo.
 echo Starting GridHealth Agent now...
 echo.
 
-REM Start the application
-start "" "%INSTALL_DIR%\GridHealth.Agent.exe"
+REM Verify executable exists before starting
+if exist "%INSTALL_DIR%\GridHealth.Agent.exe" (
+    echo Starting GridHealth Agent...
+    start "" "%INSTALL_DIR%\GridHealth.Agent.exe"
+    echo ✅ GridHealth Agent started successfully
+) else (
+    echo ❌ ERROR: Cannot start GridHealth Agent
+    echo The executable was not found at: %INSTALL_DIR%\GridHealth.Agent.exe
+    echo.
+    echo Please check the installation and try again.
+    echo You can manually start the agent from: %INSTALL_DIR%
+)
 
+echo.
 pause 

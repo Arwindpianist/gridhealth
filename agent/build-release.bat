@@ -92,6 +92,19 @@ REM Create checksum
 echo Creating checksum...
 certutil -hashfile "%RELEASE_DIR%\%PACKAGE_NAME%.zip" SHA256 > "%RELEASE_DIR%\%PACKAGE_NAME%.sha256"
 
+REM Sign the release files
+echo Signing release files...
+if exist "sign-installer.ps1" (
+    powershell -ExecutionPolicy Bypass -File "sign-installer.ps1" -NoInteraction
+    if %errorLevel% == 0 (
+        echo ✅ Files signed successfully
+    ) else (
+        echo ⚠️ Code signing failed - package will be unsigned
+    )
+) else (
+    echo ⚠️ Code signing script not found - package will be unsigned
+)
+
 echo.
 echo ========================================
 echo Release Package Created Successfully!

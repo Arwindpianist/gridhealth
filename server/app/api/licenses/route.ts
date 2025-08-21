@@ -31,9 +31,26 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .single()
 
-    if (roleError) {
-      console.error('❌ User role not found:', roleError)
-      return NextResponse.json({ error: 'User role not found' }, { status: 404 })
+    if (roleError && roleError.code !== 'PGRST116') {
+      console.error('❌ Error checking user role:', roleError)
+      return NextResponse.json({ error: 'Error checking user role' }, { status: 500 })
+    }
+
+    // If no user role exists, treat as individual user
+    if (!userRole) {
+      console.log('👤 No user role found, treating as individual user')
+      
+      return NextResponse.json({
+        success: true,
+        licenses: [],
+        organization: {
+          id: 'individual',
+          name: 'Individual Account',
+          subscription_status: 'active',
+          subscription_tier: 'individual',
+          device_limit: 3
+        }
+      })
     }
 
     // Handle individual users
