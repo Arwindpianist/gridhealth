@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
           fileName: agentAsset.name,
           fileSize: agentAsset.size,
           releaseDate: release.published_at,
-          releaseNotes: release.body || `GridHealth Agent ${release.tag_name} release`,
+          releaseNotes: getShortReleaseNotes(release.tag_name, release.body),
           downloadCount: agentAsset.download_count,
           githubUrl: `https://github.com/Arwindpianist/gridhealth/releases/tag/${release.tag_name}`
         }
@@ -93,6 +93,21 @@ export async function GET(request: NextRequest) {
   }
 }
 
+function getShortReleaseNotes(version: string, fullNotes: string): string {
+  // If no notes, return a short description
+  if (!fullNotes || fullNotes.trim() === '') {
+    return `GridHealth Agent ${version} release`
+  }
+  
+  // Take first line or first 100 characters, whichever is shorter
+  const firstLine = fullNotes.split('\n')[0].trim()
+  if (firstLine.length <= 100) {
+    return firstLine
+  }
+  
+  return firstLine.substring(0, 97) + '...'
+}
+
 function getFallbackVersions() {
   console.log('Using fallback version data')
   
@@ -103,7 +118,7 @@ function getFallbackVersions() {
       fileName: "GridHealth-Agent-v1.0.1.zip",
       fileSize: 73114548,
       releaseDate: "2025-08-21T16:08:00.000Z",
-      releaseNotes: "Fixed license validation endpoint, improved error handling, and enhanced system tray functionality",
+      releaseNotes: "Fixed license validation and improved system tray functionality",
       downloadCount: 0,
       githubUrl: "https://github.com/Arwindpianist/gridhealth/releases/tag/v1.0.1"
     },
@@ -113,7 +128,7 @@ function getFallbackVersions() {
       fileName: "GridHealth-Agent-v1.0.0.zip",
       fileSize: 69259530,
       releaseDate: "2025-08-21T11:48:00.000Z",
-      releaseNotes: "Initial release with system tray application, real-time monitoring, and professional installer",
+      releaseNotes: "Initial release with system tray application and real-time monitoring",
       downloadCount: 0,
       githubUrl: "https://github.com/Arwindpianist/gridhealth/releases/tag/v1.0.0"
     }

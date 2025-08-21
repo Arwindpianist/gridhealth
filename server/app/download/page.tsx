@@ -244,20 +244,6 @@ export default function DownloadPage() {
                   <> • <strong>Downloads:</strong> {agentVersion.downloadCount.toLocaleString()}</>
                 )}
               </p>
-              <div className="mt-2 flex space-x-2">
-                <a
-                  href={agentVersion.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-300 hover:text-blue-100 text-xs underline"
-                >
-                  View on GitHub
-                </a>
-                <span className="text-blue-400 text-xs">•</span>
-                <span className="text-blue-300 text-xs">
-                  Source: {agentVersion.downloadUrl.includes('github.com') ? 'GitHub Releases' : 'Direct Download'}
-                </span>
-              </div>
             </div>
           )}
         </div>
@@ -562,7 +548,7 @@ export default function DownloadPage() {
               <h4 className="text-green-400 font-semibold mb-2">🎉 GridHealth Agent {agentVersion?.version || 'Latest'} Released!</h4>
               <p className="text-green-300 text-sm">
                 Download the complete agent package with professional installer, system tray application, 
-                and real-time monitoring capabilities. {agentVersion?.releaseNotes && `Latest update: ${agentVersion.releaseNotes}`}
+                and real-time monitoring capabilities.
               </p>
             </div>
 
