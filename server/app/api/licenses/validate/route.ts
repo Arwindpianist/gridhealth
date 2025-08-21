@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     if (licenseError || !license) {
       console.log('❌ License not found or inactive:', license_key)
       console.log('License error:', licenseError)
+      console.log('License data:', license)
       return NextResponse.json({
         isValid: false,
         message: 'Invalid or inactive license key',
@@ -48,6 +49,16 @@ export async function POST(request: NextRequest) {
         licenseType: ''
       })
     }
+
+    console.log('🔍 License found:', {
+      id: license.id,
+      license_key: license.license_key,
+      organization_id: license.organization_id,
+      device_limit: license.device_limit,
+      status: license.status,
+      expires_at: license.expires_at,
+      organizations: license.organizations
+    })
 
     // Check if license has expired
     if (license.expires_at && new Date(license.expires_at) < new Date()) {
