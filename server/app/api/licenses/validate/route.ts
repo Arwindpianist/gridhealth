@@ -27,10 +27,7 @@ export async function POST(request: NextRequest) {
         *,
         organizations (
           id,
-          name,
-          subscription_status,
-          subscription_tier,
-          device_limit
+          name
         )
       `)
       .eq('license_key', license_key)
@@ -88,7 +85,7 @@ export async function POST(request: NextRequest) {
         message: 'Error checking device limit',
         organizationName: license.organizations?.name || '',
         deviceLimit: deviceLimit,
-        licenseType: license.organizations?.subscription_tier || 'Standard'
+        licenseType: 'Standard'
       })
     }
 
@@ -101,7 +98,7 @@ export async function POST(request: NextRequest) {
         message: `Device limit reached (${currentDeviceCount}/${deviceLimit})`,
         organizationName: license.organizations?.name || '',
         deviceLimit: deviceLimit,
-        licenseType: license.organizations?.subscription_tier || 'Standard'
+        licenseType: 'Standard'
       })
     }
 
@@ -117,7 +114,7 @@ export async function POST(request: NextRequest) {
       message: 'License is valid',
       organizationName: license.organizations?.name || 'Licensed Organization',
       deviceLimit: deviceLimit,
-      licenseType: license.organizations?.subscription_tier || 'Standard'
+      licenseType: 'Standard'
     })
 
   } catch (error) {
