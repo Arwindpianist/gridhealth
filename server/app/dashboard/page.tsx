@@ -38,6 +38,24 @@ export default async function DashboardPage() {
       } else {
         console.log('✅ Basic user profile created')
         user = newUser
+        
+        // Create a basic individual user role for the new user
+        try {
+          const { error: roleError } = await supabaseAdmin
+            .from('user_roles')
+            .insert({
+              user_id: newUser.id,
+              role: 'individual'
+            })
+          
+          if (roleError) {
+            console.error('❌ Error creating user role:', roleError)
+          } else {
+            console.log('✅ Basic user role created')
+          }
+        } catch (roleError) {
+          console.error('❌ Exception creating user role:', roleError)
+        }
       }
     }
 
@@ -103,9 +121,177 @@ export default async function DashboardPage() {
     // Allow them to stay on the dashboard to purchase licenses
     console.log('✅ User can access dashboard for license purchase')
 
+    // Return the dashboard content for new users
+    return (
+      <div className="min-h-screen bg-dark-900">
+        {/* Header */}
+        <div className="bg-dark-800 border-b border-dark-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-6">
+              <div>
+                <h1 className="text-2xl font-bold text-white">Welcome to GridHealth!</h1>
+                <p className="text-dark-300">Get started with system health monitoring</p>
+              </div>
+              <div className="flex space-x-4">
+                <a 
+                  href="/profile" 
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Complete Profile
+                </a>
+                <a 
+                  href="/licenses" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Get License
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Welcome Section */}
+          <div className="bg-gradient-to-r from-gridhealth-600 to-gridhealth-800 rounded-lg p-8 mb-8">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-white mb-4">
+                🚀 Welcome to GridHealth!
+              </h2>
+              <p className="text-xl text-gridhealth-100 mb-6">
+                You're just a few steps away from monitoring your system health
+              </p>
+              <div className="flex justify-center space-x-4">
+                <a 
+                  href="/profile" 
+                  className="bg-white text-gridhealth-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                >
+                  Complete Your Profile
+                </a>
+                <a 
+                  href="/download" 
+                  className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-gridhealth-600 transition-colors"
+                >
+                  Download Agent
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Start Steps */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-dark-800 rounded-lg p-6 border border-dark-700">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-white font-bold text-xl">1</span>
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">Complete Profile</h3>
+                <p className="text-gray-400 text-sm">
+                  Tell us about yourself and your organization to get started
+                </p>
+                <a 
+                  href="/profile" 
+                  className="inline-block mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium"
+                >
+                  Get Started →
+                </a>
+              </div>
+            </div>
+
+            <div className="bg-dark-800 rounded-lg p-6 border border-dark-700">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-white font-bold text-xl">2</span>
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">Get License</h3>
+                <p className="text-gray-400 text-sm">
+                  Choose a plan that fits your monitoring needs
+                </p>
+                <a 
+                  href="/licenses" 
+                  className="inline-block mt-4 text-green-400 hover:text-green-300 text-sm font-medium"
+                >
+                  View Plans →
+                </a>
+              </div>
+            </div>
+
+            <div className="bg-dark-800 rounded-lg p-6 border border-dark-700">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-white font-bold text-xl">3</span>
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">Download Agent</h3>
+                <p className="text-gray-400 text-sm">
+                  Install the monitoring agent on your systems
+                </p>
+                <a 
+                  href="/download" 
+                  className="inline-block mt-4 text-purple-400 hover:text-purple-300 text-sm font-medium"
+                >
+                  Download →
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Features Preview */}
+          <div className="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <h3 className="text-xl font-semibold text-white mb-4">What You'll Get</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-5 h-5 bg-green-500 rounded-full mt-1"></div>
+                <div>
+                  <h4 className="text-white font-medium">Real-time Monitoring</h4>
+                  <p className="text-gray-400 text-sm">Track CPU, memory, disk, and network usage</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="w-5 h-5 bg-green-500 rounded-full mt-1"></div>
+                <div>
+                  <h4 className="text-white font-medium">Health Scoring</h4>
+                  <p className="text-gray-400 text-sm">Get instant health scores for your systems</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="w-5 h-5 bg-green-500 rounded-full mt-1"></div>
+                <div>
+                  <h4 className="text-white font-medium">Device Management</h4>
+                  <p className="text-gray-400 text-sm">Monitor multiple devices from one dashboard</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="w-5 h-5 bg-green-500 rounded-full mt-1"></div>
+                <div>
+                  <h4 className="text-white font-medium">Alerts & Notifications</h4>
+                  <p className="text-gray-400 text-sm">Stay informed about system issues</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+
   } catch (error) {
     console.error('Error checking user status:', error)
     // Don't redirect to onboarding, allow access to dashboard
     console.log('⚠️ Error occurred, but allowing dashboard access')
+    
+    // Return error dashboard
+    return (
+      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-white mb-2">Something went wrong</h1>
+          <p className="text-gray-400 mb-6">We encountered an error loading your dashboard</p>
+          <a 
+            href="/dashboard" 
+            className="bg-gridhealth-600 hover:bg-gridhealth-700 text-white px-6 py-3 rounded-lg transition-colors"
+          >
+            Try Again
+          </a>
+        </div>
+      </div>
+    )
   }
 } 

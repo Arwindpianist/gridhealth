@@ -241,8 +241,21 @@ For support, contact: support@gridhealth.arwindpianist.store`
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                 </svg>
                 <h3 className="mt-2 text-sm font-medium text-dark-300">No licenses yet</h3>
-                <p className="mt-1 text-sm text-dark-400">Get started by purchasing your first GridHealth monitoring license.</p>
-                <div className="mt-6">
+                <p className="mt-1 text-sm text-dark-400">
+                  {organization?.name === 'Individual Account' 
+                    ? 'Complete your profile and purchase your first GridHealth monitoring license to get started.'
+                    : 'Get started by purchasing your first GridHealth monitoring license.'
+                  }
+                </p>
+                <div className="mt-6 space-x-4">
+                  {organization?.name === 'Individual Account' && (
+                    <Link 
+                      href="/profile" 
+                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700"
+                    >
+                      Complete Profile First
+                    </Link>
+                  )}
                   <Link 
                     href="/pricing" 
                     className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
