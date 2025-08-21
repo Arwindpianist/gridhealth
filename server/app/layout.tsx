@@ -11,6 +11,13 @@ export const metadata: Metadata = {
   title: 'GridHealth - Enterprise System Health Monitoring',
   description: 'Professional system health monitoring platform for enterprises. Monitor CPU, memory, disk, and network health across your organization.',
   keywords: 'system monitoring, health monitoring, enterprise monitoring, IT monitoring, system health',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' }
+    ],
+    apple: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({

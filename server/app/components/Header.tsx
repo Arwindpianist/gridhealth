@@ -35,18 +35,25 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo & Brand */}
-          <div className="flex items-center space-x-3">
+          <Link href={user ? '/dashboard' : '/'} className="flex items-center space-x-3 hover:opacity-80 transition-opacity duration-200">
             <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-gridhealth-500 to-primary-500 rounded-xl flex items-center justify-center">
-                <div className="w-6 h-6 bg-white rounded-lg"></div>
-              </div>
+              <img 
+                src="/favicon.svg" 
+                alt="GridHealth Logo" 
+                className="w-10 h-10 rounded-xl"
+                onError={(e) => {
+                  // Fallback to ICO if SVG fails
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/favicon.ico';
+                }}
+              />
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             </div>
             <div>
               <div className="text-xl font-bold gradient-text">GridHealth</div>
               <div className="text-xs text-gray-400">By: arwindpianist.store</div>
             </div>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface License {
   id: string
@@ -30,6 +31,9 @@ export default function LicensesPage() {
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [selectedLicense, setSelectedLicense] = useState<License | null>(null)
+  const [additionalDevices, setAdditionalDevices] = useState(10)
 
   useEffect(() => {
     if (isLoaded && user) {
@@ -108,12 +112,41 @@ For support, contact: support@gridhealth.arwindpianist.store`
     window.URL.revokeObjectURL(url)
   }
 
-  if (!isLoaded || isLoading) {
+  const openUpgradeModal = (license: License) => {
+    setSelectedLicense(license)
+    setShowUpgradeModal(true)
+  }
+
+  const closeUpgradeModal = () => {
+    setShowUpgradeModal(false)
+    setSelectedLicense(null)
+    setAdditionalDevices(10)
+  }
+
+  const handleUpgrade = async () => {
+    if (!selectedLicense) return
+
+    try {
+      // TODO: Implement upgrade logic
+      // This would typically involve:
+      // 1. Creating a Stripe checkout session
+      // 2. Updating the license in the database
+      // 3. Refreshing the licenses list
+      
+      alert(`Upgrade functionality will be implemented soon. You selected to add ${additionalDevices} devices to license ${selectedLicense.license_key}`)
+      closeUpgradeModal()
+    } catch (error) {
+      console.error('Error upgrading license:', error)
+      alert('Failed to upgrade license. Please try again.')
+    }
+  }
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-dark-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gridhealth-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading licenses...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-white mt-4">Loading licenses...</p>
         </div>
       </div>
     )
@@ -123,12 +156,12 @@ For support, contact: support@gridhealth.arwindpianist.store`
     return (
       <div className="min-h-screen bg-dark-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-400 text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-white mb-4">Error Loading Licenses</h2>
-          <p className="text-gray-400 mb-6">{error}</p>
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-white mb-2">Error Loading Licenses</h1>
+          <p className="text-gray-400 mb-4">{error}</p>
           <button 
             onClick={fetchLicenses}
-            className="btn-primary px-6 py-3"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
           >
             Try Again
           </button>
@@ -138,158 +171,255 @@ For support, contact: support@gridhealth.arwindpianist.store`
   }
 
   return (
-    <div className="min-h-screen bg-dark-900 pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Your <span className="gradient-text">Licenses</span>
-          </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Manage your GridHealth licenses, download license keys, and monitor your subscription status.
-          </p>
+    <div className="min-h-screen bg-dark-900">
+      {/* Header */}
+      <div className="bg-dark-800 border-b border-dark-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-2xl font-bold text-white">License Management</h1>
+              <p className="text-dark-300">Manage your GridHealth monitoring licenses</p>
+            </div>
+            <div className="flex space-x-4">
+              <Link 
+                href="/pricing" 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Purchase New License
+              </Link>
+              <Link 
+                href="/dashboard" 
+                className="bg-dark-700 hover:bg-dark-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Back to Dashboard
+              </Link>
+            </div>
+          </div>
         </div>
+      </div>
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Organization Info */}
         {organization && (
-          <div className="card mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">Organization Information</h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div>
-                <div className="text-gray-400 text-sm mb-1">Organization Name</div>
-                <div className="text-white font-semibold">{organization.name}</div>
-              </div>
-              <div>
-                <div className="text-gray-400 text-sm mb-1">Subscription Status</div>
-                <div className={`font-semibold ${
-                  organization.subscription_status === 'active' ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  {organization.subscription_status === 'active' ? '🟢 Active' : '🔴 Inactive'}
+          <div className="bg-dark-800 rounded-lg border border-dark-700 mb-8">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Organization Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="text-sm font-medium text-dark-300">Organization Name</label>
+                  <p className="text-white font-semibold">{organization.name}</p>
                 </div>
-              </div>
-              <div>
-                <div className="text-gray-400 text-sm mb-1">Device Limit</div>
-                <div className="text-white font-semibold">{organization.device_limit} devices</div>
+                <div>
+                  <label className="text-sm font-medium text-dark-300">Subscription Status</label>
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    organization.subscription_status === 'active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {organization.subscription_status}
+                  </span>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-dark-300">Total Device Limit</label>
+                  <p className="text-white font-semibold">{organization.device_limit}</p>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Licenses */}
-        <div className="space-y-6">
-          {licenses.length === 0 ? (
-            <div className="card text-center py-12">
-              <div className="text-6xl mb-4">🔑</div>
-              <h3 className="text-2xl font-semibold text-white mb-4">No Licenses Found</h3>
-              <p className="text-gray-400 mb-6">
-                You don't have any active licenses yet. Purchase a license to start monitoring your devices.
-              </p>
-              <button 
-                onClick={() => router.push('/pricing')}
-                className="btn-primary px-8 py-3"
-              >
-                View Pricing
-              </button>
-            </div>
-          ) : (
-            licenses.map((license) => (
-              <div key={license.id} className="card">
-                <div className="flex flex-col md:flex-row md:items-center justify-between">
-                  <div className="mb-4 md:mb-0">
-                    <div className="flex items-center mb-2">
-                      <h3 className="text-xl font-semibold text-white mr-3">
-                        {license.tier.charAt(0).toUpperCase() + license.license_key.slice(1)} License
-                      </h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        license.status === 'active' 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {license.status === 'active' ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <div className="text-gray-400">License Key</div>
-                        <div className="text-white font-mono bg-dark-800 px-2 py-1 rounded">
-                          {license.license_key}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-gray-400">Device Limit</div>
-                        <div className="text-white font-semibold">{license.device_limit} devices</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-400">Price</div>
-                        <div className="text-white font-semibold">MYR {license.price_myr}</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-400">Expires</div>
-                        <div className="text-white font-semibold">
-                          {new Date(license.expires_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                      onClick={() => downloadLicense(license)}
-                      className="btn-outline px-4 py-2 text-sm"
-                    >
-                      📥 Download TXT
-                    </button>
-                    <button
-                      onClick={() => downloadLicenseJSON(license)}
-                      className="btn-outline px-4 py-2 text-sm"
-                    >
-                      📥 Download JSON
-                    </button>
-                    <button
-                      onClick={() => router.push('/download')}
-                      className="btn-primary px-4 py-2 text-sm"
-                    >
-                      🖥️ Download Agent
-                    </button>
-                  </div>
+        {/* Licenses List */}
+        <div className="bg-dark-800 rounded-lg border border-dark-700">
+          <div className="px-6 py-4 border-b border-dark-700">
+            <h2 className="text-xl font-semibold text-white">Your Licenses</h2>
+            <p className="text-dark-300">Manage and download your GridHealth monitoring licenses</p>
+          </div>
+          <div className="p-6">
+            {licenses.length === 0 ? (
+              <div className="text-center py-8">
+                <svg className="mx-auto h-12 w-12 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-dark-300">No licenses yet</h3>
+                <p className="mt-1 text-sm text-dark-400">Get started by purchasing your first GridHealth monitoring license.</p>
+                <div className="mt-6">
+                  <Link 
+                    href="/pricing" 
+                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    Purchase License
+                  </Link>
                 </div>
               </div>
-            ))
-          )}
+            ) : (
+              <div className="space-y-6">
+                {licenses.map((license) => (
+                  <div key={license.id} className="bg-dark-700 rounded-lg p-6 border border-dark-600">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-4">
+                          <h3 className="text-lg font-semibold text-white">{license.tier} License</h3>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            license.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {license.status}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                          <div>
+                            <label className="text-sm font-medium text-dark-300">License Key</label>
+                            <p className="text-white font-mono text-sm">{license.license_key}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-dark-300">Device Limit</label>
+                            <p className="text-white font-semibold">{license.device_limit} devices</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-dark-300">Expires</label>
+                            <p className="text-white">{new Date(license.expires_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={() => downloadLicense(license)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                          >
+                            Download as Text
+                          </button>
+                          <button
+                            onClick={() => downloadLicenseJSON(license)}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                          >
+                            Download as JSON
+                          </button>
+                          <button
+                            onClick={() => openUpgradeModal(license)}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                          >
+                            Upgrade License
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-12 text-center">
-          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            <button
-              onClick={() => router.push('/download')}
-              className="card-hover p-6 text-center group"
-            >
-              <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-200">
-                🖥️
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Download Agent</h3>
-              <p className="text-gray-400 text-sm">
-                Get the GridHealth monitoring agent for your devices
-              </p>
-            </button>
-            
-            <button
-              onClick={() => router.push('/pricing')}
-              className="card-hover p-6 text-center group"
-            >
-              <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-200">
-                💳
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Purchase License</h3>
-              <p className="text-gray-400 text-sm">
-                Buy additional licenses or upgrade your plan
-              </p>
-            </button>
+        <div className="bg-dark-800 rounded-lg border border-dark-700 mt-8">
+          <div className="px-6 py-4 border-b border-dark-700">
+            <h2 className="text-xl font-semibold text-white">Quick Actions</h2>
+            <p className="text-dark-300">Get started with GridHealth monitoring</p>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Link 
+                href="/download" 
+                className="flex items-center p-4 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors"
+              >
+                <div className="p-2 bg-blue-600 rounded-lg mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-white">Download Agent</h3>
+                  <p className="text-sm text-dark-400">Get the GridHealth monitoring agent</p>
+                </div>
+              </Link>
+
+              <Link 
+                href="/pricing" 
+                className="flex items-center p-4 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors"
+              >
+                <div className="p-2 bg-green-600 rounded-lg mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-white">Purchase License</h3>
+                  <p className="text-sm text-dark-400">Buy a new monitoring license</p>
+                </div>
+              </Link>
+
+              <Link 
+                href="/dashboard" 
+                className="flex items-center p-4 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors"
+              >
+                <div className="p-2 bg-purple-600 rounded-lg mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-white">View Dashboard</h3>
+                  <p className="text-sm text-dark-400">Monitor your devices and health</p>
+                </div>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && selectedLicense && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-dark-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Upgrade License</h3>
+            <p className="text-dark-300 mb-4">
+              Add more devices to your existing license: <strong>{selectedLicense.license_key}</strong>
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-dark-300 mb-2">
+                Additional Devices
+              </label>
+              <select
+                value={additionalDevices}
+                onChange={(e) => setAdditionalDevices(Number(e.target.value))}
+                className="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white"
+              >
+                <option value={10}>10 devices</option>
+                <option value={25}>25 devices</option>
+                <option value={50}>50 devices</option>
+                <option value={100}>100 devices</option>
+                <option value={250}>250 devices</option>
+                <option value={500}>500 devices</option>
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-dark-300">
+                Current limit: <strong>{selectedLicense.device_limit}</strong> devices<br />
+                New limit: <strong>{selectedLicense.device_limit + additionalDevices}</strong> devices
+              </p>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={closeUpgradeModal}
+                className="flex-1 bg-dark-700 hover:bg-dark-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpgrade}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Upgrade License
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

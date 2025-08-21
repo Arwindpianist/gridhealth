@@ -36,6 +36,20 @@ public partial class OnboardingForm : Form
         this.MaximizeBox = false;
         this.BackColor = Color.FromArgb(18, 18, 18);
         
+        // Set form icon
+        try
+        {
+            string iconPath = Path.Combine(Application.StartupPath, "assets", "favicon.ico");
+            if (File.Exists(iconPath))
+            {
+                this.Icon = new Icon(iconPath);
+            }
+        }
+        catch
+        {
+            // Silently handle icon loading errors
+        }
+        
         // Main panel
         var mainPanel = new Panel
         {

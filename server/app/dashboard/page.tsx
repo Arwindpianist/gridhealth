@@ -28,6 +28,29 @@ export default async function DashboardPage() {
       redirect('/onboarding')
     }
 
+    // Check if user has completed onboarding by looking for a completed flag or checking if they have any licenses
+    const { data: userLicenses } = await supabaseAdmin
+      .from('licenses')
+      .select('id')
+      .eq('organization_id', user.id)
+      .limit(1)
+
+    // If user has no licenses and is not an admin, they might still need onboarding
+    if (!userLicenses || userLicenses.length === 0) {
+      // Check if they're an admin
+      const { data: adminRole } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single()
+
+      if (!adminRole) {
+        // Only redirect to onboarding if they're not an admin and have no licenses
+        redirect('/onboarding')
+      }
+    }
+
     // Check if user is admin
     const { data: userRole } = await supabaseAdmin
       .from('user_roles')

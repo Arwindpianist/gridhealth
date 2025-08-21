@@ -44,19 +44,20 @@ async function getDashboardData(userId: string) {
       .in('organization_id', orgIds)
       .eq('status', 'active')
 
-    // Get devices for user's organizations
+    // Get devices for user's organizations (using the new devices table structure)
     const { data: devices } = await supabaseAdmin
       .from('devices')
       .select('*')
-      .in('organization_id', orgIds)
+      .in('license_key', licenses?.map(l => l.license_key) || [])
 
     // Get health metrics for user's devices
-    const deviceIds = devices?.map(d => d.id) || []
+    const deviceIds = devices?.map(d => d.device_id) || []
     const { data: healthMetrics } = await supabaseAdmin
       .from('health_metrics')
       .select('*')
       .in('device_id', deviceIds)
-      .limit(10)
+      .order('timestamp', { ascending: false })
+      .limit(20)
 
     return {
       user,
@@ -91,162 +92,316 @@ export default async function CompleteDashboardPage() {
   
   // Calculate stats
   const totalDevices = devices.length
-  const activeDevices = devices.filter(d => d.status === 'active').length
+  const activeDevices = devices.filter(d => d.is_active).length
   const totalLicenses = licenses.length
   const totalDeviceLimit = licenses.reduce((sum, license) => sum + license.device_limit, 0)
   const availableDevices = totalDeviceLimit - totalDevices
 
+  // Get recent health data
+  const recentHealthData = healthMetrics.slice(0, 5)
+  
+  // Calculate device status (online/offline based on last_seen)
+  const onlineDevices = devices.filter(d => {
+    if (!d.last_seen) return false
+    const lastSeen = new Date(d.last_seen)
+    const now = new Date()
+    const minutesSinceLastSeen = (now.getTime() - lastSeen.getTime()) / (1000 * 60)
+    return minutesSinceLastSeen <= 5 // Device is online if last seen within 5 minutes
+  }).length
+
+  const offlineDevices = totalDevices - onlineDevices
+
   return (
     <div className="min-h-screen bg-dark-900">
-      {/* Hero Section */}
-      <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1),transparent_50%)]"></div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Welcome to <span className="gradient-text">GridHealth Dashboard</span>
-            </h1>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Monitor your systems, view health metrics, and manage your devices from one central location.
-            </p>
-          </div>
-
-          {/* Dashboard Stats */}
-          <div className="grid md:grid-cols-4 gap-6 mb-12">
-            <div className="card text-center">
-              <div className="text-3xl font-bold text-gridhealth-400 mb-2">{activeDevices}</div>
-              <div className="text-gray-400">Active Devices</div>
-            </div>
-            <div className="card text-center">
-              <div className="text-3xl font-bold text-primary-400 mb-2">{totalLicenses}</div>
-              <div className="text-gray-400">Active Licenses</div>
-            </div>
-            <div className="card text-center">
-              <div className="text-3xl font-bold text-green-400 mb-2">{availableDevices}</div>
-              <div className="text-gray-400">Available Devices</div>
-            </div>
-            <div className="card text-center">
-              <div className="text-3xl font-bold text-yellow-400 mb-2">{totalDeviceLimit}</div>
-              <div className="text-gray-400">Total Device Limit</div>
-            </div>
-          </div>
-
-          {/* License Information */}
-          {licenses.length > 0 ? (
-            <div className="card mb-8">
-              <h3 className="text-xl font-semibold text-white mb-4">Your Licenses</h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {licenses.map((license) => (
-                  <div key={license.id} className="p-4 bg-dark-800 rounded-lg border border-dark-700">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-400">{license.tier}</span>
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        license.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {license.status}
-                      </span>
-                    </div>
-                    <div className="text-2xl font-bold text-white mb-1">{license.device_limit}</div>
-                    <div className="text-sm text-gray-400">Device Limit</div>
-                    <div className="text-xs text-gray-500 mt-2">
-                      Expires: {new Date(license.expires_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="card mb-8 text-center">
-              <div className="text-6xl mb-6">🔑</div>
-              <h2 className="text-2xl font-bold text-white mb-4">No Licenses Found</h2>
-              <p className="text-gray-400 mb-6">
-                {isIndividual 
-                  ? 'As an individual user, you can start monitoring your personal devices immediately. Purchase a license to unlock advanced features.'
-                  : 'You need a license to start monitoring devices. Choose a plan that fits your needs.'
-                }
-              </p>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
-                {[
-                  { tier: 'Basic', devices: 10, price: 'MYR 11', color: 'from-blue-500 to-blue-600' },
-                  { tier: 'Standard', devices: 50, price: 'MYR 11', color: 'from-purple-500 to-purple-600' },
-                  { tier: 'Professional', devices: 100, price: 'MYR 11', color: 'from-green-500 to-green-600' },
-                  { tier: 'Enterprise', devices: 500, price: 'MYR 11', color: 'from-orange-500 to-orange-600' }
-                ].map((plan) => (
-                  <div key={plan.tier} className="p-4 bg-dark-800 rounded-lg border border-dark-700 hover:border-gridhealth-500/50 transition-all">
-                    <h3 className="text-lg font-semibold text-white mb-2">{plan.tier}</h3>
-                    <div className="text-2xl font-bold text-gridhealth-400 mb-1">{plan.devices}</div>
-                    <div className="text-sm text-gray-400 mb-3">Devices</div>
-                    <div className="text-lg font-bold text-white mb-3">{plan.price}</div>
-                    <div className="text-xs text-gray-500">per 3 months</div>
-                    <Link 
-                      href={`/pricing?tier=${plan.tier.toLowerCase()}`}
-                      className="w-full mt-3 py-2 px-4 bg-gradient-to-r from-gridhealth-500 to-primary-500 text-white rounded-lg hover:from-gridhealth-600 hover:to-primary-600 transition-all font-medium block text-center"
-                    >
-                      Select Plan
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Quick Actions */}
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="card">
-              <h3 className="text-xl font-semibold text-white mb-4">Quick Actions</h3>
-              <div className="space-y-4">
-                <Link href="/download" className="btn-primary w-full py-4 text-center text-lg font-semibold">
-                  📥 Download GridHealth Agent
-                </Link>
-                <Link href="/licenses" className="btn-secondary w-full py-4 text-center text-lg font-semibold">
-                  🔑 Manage Licenses
-                </Link>
-                {licenses.length === 0 ? (
-                  <Link href="/pricing" className="btn-outline w-full py-4 text-center text-lg font-semibold">
-                    {isIndividual ? '💳 Get Premium Features' : '💳 Purchase License'}
-                  </Link>
-                ) : (
-                  <Link href="/pricing" className="btn-outline w-full py-4 text-center text-lg font-semibold">
-                    🚀 Upgrade License
-                  </Link>
-                )}
-                {isIndividual && (
-                  <Link href="/download" className="btn-outline w-full py-4 text-center text-lg font-semibold">
-                    🚀 Start Monitoring Now
-                  </Link>
-                )}
-              </div>
-            </div>
-            
-            <div className="card">
-              <h3 className="text-xl font-semibold text-white mb-4">Recent Activity</h3>
-              {healthMetrics.length > 0 ? (
-                <div className="space-y-3">
-                  {healthMetrics.slice(0, 5).map((metric, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-dark-800 rounded-lg">
-                      <div>
-                        <div className="text-white font-medium">{metric.metric_type}</div>
-                        <div className="text-sm text-gray-400">{metric.value} {metric.unit}</div>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(metric.timestamp).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-gray-400 text-center py-8">
-                  <div className="text-6xl mb-4">📊</div>
-                  <p>No recent activity</p>
-                  <p className="text-sm">Start monitoring devices to see activity here</p>
+      {/* Header */}
+      <div className="bg-dark-800 border-b border-dark-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-2xl font-bold text-white">GridHealth Dashboard</h1>
+              <p className="text-dark-300">Monitor your system health and devices</p>
+              {totalDevices > 0 && (
+                <div className="flex items-center mt-2">
+                  <div className={`w-2 h-2 rounded-full mr-2 ${onlineDevices > 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <span className="text-sm text-dark-300">
+                    {onlineDevices > 0 ? `${onlineDevices} device${onlineDevices > 1 ? 's' : ''} online` : 'All devices offline'}
+                  </span>
                 </div>
               )}
             </div>
+            <div className="flex space-x-4">
+              <Link 
+                href="/licenses" 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Manage Licenses
+              </Link>
+              <Link 
+                href="/download" 
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Download Agent
+              </Link>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-dark-300 text-sm font-medium">Total Devices</p>
+                <p className="text-2xl font-bold text-white">{totalDevices}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-600 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-dark-300 text-sm font-medium">Online Devices</p>
+                <p className="text-2xl font-bold text-white">{onlineDevices}</p>
+                <p className="text-xs text-green-400">{offlineDevices > 0 ? `${offlineDevices} offline` : 'All devices online'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-600 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-dark-300 text-sm font-medium">Licenses</p>
+                <p className="text-2xl font-bold text-white">{totalLicenses}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-dark-800 rounded-lg p-6 border border-dark-700">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-600 rounded-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-dark-300 text-sm font-medium">Available Slots</p>
+                <p className="text-2xl font-bold text-white">{availableDevices}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Device Management Section */}
+        <div className="bg-dark-800 rounded-lg border border-dark-700 mb-8">
+          <div className="px-6 py-4 border-b border-dark-700">
+            <h2 className="text-xl font-semibold text-white">Device Management</h2>
+            <p className="text-dark-300">Monitor and manage your GridHealth agents</p>
+          </div>
+          <div className="p-6">
+            {devices.length === 0 ? (
+              <div className="text-center py-8">
+                <svg className="mx-auto h-12 w-12 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-dark-300">No devices yet</h3>
+                <p className="mt-1 text-sm text-dark-400">Get started by downloading and installing the GridHealth agent on your devices.</p>
+                <div className="mt-6">
+                  <Link 
+                    href="/download" 
+                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    Download Agent
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-dark-700">
+                  <thead className="bg-dark-700">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">Device</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">OS</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">Last Seen</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">Health Score</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-dark-800 divide-y divide-dark-700">
+                    {devices.map((device) => {
+                      const deviceHealth = healthMetrics.find(h => h.device_id === device.device_id)
+                      return (
+                        <tr key={device.device_id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-white">{device.device_name || device.hostname || 'Unknown Device'}</div>
+                              <div className="text-sm text-dark-400">{device.device_id}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-dark-300">{device.os_name || 'Unknown'}</div>
+                            <div className="text-sm text-dark-400">{device.os_version || ''}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {(() => {
+                              if (!device.last_seen) {
+                                return (
+                                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                    Never Seen
+                                  </span>
+                                )
+                              }
+                              
+                              const lastSeen = new Date(device.last_seen)
+                              const now = new Date()
+                              const minutesSinceLastSeen = (now.getTime() - lastSeen.getTime()) / (1000 * 60)
+                              const isOnline = minutesSinceLastSeen <= 5
+                              
+                              return (
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  isOnline 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {isOnline ? '🟢 Online' : '🔴 Offline'}
+                                </span>
+                              )
+                            })()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-dark-300">
+                            {device.last_seen ? new Date(device.last_seen).toLocaleDateString() : 'Never'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {deviceHealth ? (
+                              <div className="flex items-center">
+                                <div className={`w-3 h-3 rounded-full mr-2 ${
+                                  deviceHealth.value >= 80 ? 'bg-green-500' :
+                                  deviceHealth.value >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}></div>
+                                <span className="text-sm text-white">{deviceHealth.value}/100</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-dark-400">No data</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Health Data */}
+        {healthMetrics.length > 0 && (
+          <div className="bg-dark-800 rounded-lg border border-dark-700">
+            <div className="px-6 py-4 border-b border-dark-700">
+              <h2 className="text-xl font-semibold text-white">Recent Health Data</h2>
+              <p className="text-dark-300">Latest system health metrics from your devices</p>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {recentHealthData.map((metric) => (
+                  <div key={metric.id} className="flex items-center justify-between p-4 bg-dark-700 rounded-lg">
+                    <div className="flex items-center">
+                      <div className={`w-3 h-3 rounded-full mr-3 ${
+                        metric.value >= 80 ? 'bg-green-500' :
+                        metric.value >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}></div>
+                      <div>
+                        <div className="text-sm font-medium text-white">
+                          Device: {metric.device_id}
+                        </div>
+                        <div className="text-sm text-dark-400">
+                          {new Date(metric.timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-white">{metric.value}/100</div>
+                      <div className="text-sm text-dark-400">Health Score</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="bg-dark-800 rounded-lg border border-dark-700">
+          <div className="px-6 py-4 border-b border-dark-700">
+            <h2 className="text-xl font-semibold text-white">Quick Actions</h2>
+            <p className="text-dark-300">Get started with GridHealth monitoring</p>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Link 
+                href="/download" 
+                className="flex items-center p-4 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors"
+              >
+                <div className="p-2 bg-blue-600 rounded-lg mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-white">Download Agent</h3>
+                  <p className="text-sm text-dark-400">Get the GridHealth monitoring agent</p>
+                </div>
+              </Link>
+
+              <Link 
+                href="/licenses" 
+                className="flex items-center p-4 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors"
+              >
+                <div className="p-2 bg-purple-600 rounded-lg mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-white">Manage Licenses</h3>
+                  <p className="text-sm text-dark-400">View and manage your licenses</p>
+                </div>
+              </Link>
+
+              <Link 
+                href="/pricing" 
+                className="flex items-center p-4 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors"
+              >
+                <div className="p-2 bg-green-600 rounded-lg mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-white">Upgrade Plan</h3>
+                  <p className="text-sm text-dark-400">Add more devices to your plan</p>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 } 
