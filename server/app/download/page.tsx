@@ -28,6 +28,8 @@ interface AgentVersion {
   fileSize: number
   releaseDate: string
   releaseNotes: string
+  downloadCount: number
+  githubUrl: string
 }
 
 export default function DownloadPage() {
@@ -139,8 +141,8 @@ export default function DownloadPage() {
       return
     }
     
-    // Download the actual GridHealth Agent package
-    const downloadUrl = `https://gridhealth.arwindpianist.store${agentVersion.downloadUrl}`
+    // Download directly from GitHub releases
+    const downloadUrl = agentVersion.downloadUrl
     console.log('Download URL:', downloadUrl)
     console.log('File name:', agentVersion.fileName)
     
@@ -152,7 +154,7 @@ export default function DownloadPage() {
     a.click()
     document.body.removeChild(a)
     
-    console.log('Download initiated')
+    console.log('Download initiated from GitHub')
   }
 
   if (isLoading) {
@@ -238,7 +240,24 @@ export default function DownloadPage() {
                 <strong>Latest Version:</strong> {agentVersion.version} • 
                 <strong>Released:</strong> {new Date(agentVersion.releaseDate).toLocaleDateString()} • 
                 <strong>Size:</strong> {(agentVersion.fileSize / (1024 * 1024)).toFixed(1)} MB
+                {agentVersion.downloadCount > 0 && (
+                  <> • <strong>Downloads:</strong> {agentVersion.downloadCount.toLocaleString()}</>
+                )}
               </p>
+              <div className="mt-2 flex space-x-2">
+                <a
+                  href={agentVersion.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-300 hover:text-blue-100 text-xs underline"
+                >
+                  View on GitHub
+                </a>
+                <span className="text-blue-400 text-xs">•</span>
+                <span className="text-blue-300 text-xs">
+                  Source: {agentVersion.downloadUrl.includes('github.com') ? 'GitHub Releases' : 'Direct Download'}
+                </span>
+              </div>
             </div>
           )}
         </div>

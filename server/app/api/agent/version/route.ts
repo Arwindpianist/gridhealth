@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readdirSync, statSync } from 'fs'
-import { join } from 'path'
+
+interface GitHubRelease {
+  id: number
+  tag_name: string
+  name: string
+  body: string
+  published_at: string
+  assets: Array<{
+    id: number
+    name: string
+    size: number
+    download_count: number
+    browser_download_url: string
+  }>
+}
 
 interface AgentVersion {
   version: string
@@ -9,116 +22,107 @@ interface AgentVersion {
   fileSize: number
   releaseDate: string
   releaseNotes: string
+  downloadCount: number
+  githubUrl: string
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // Try multiple path resolution methods
-    const possiblePaths = [
-      join(process.cwd(), '..', 'agent', 'release'),
-      join(process.cwd(), 'agent', 'release'),
-      join(__dirname, '..', '..', '..', '..', 'agent', 'release'),
-      'C:/Users/arwin/Desktop/ADPMC/gridhealth/agent/release' // Fallback absolute path
-    ]
-    
-    let agentReleasePath = ''
-    let releases = []
-    
-    for (const path of possiblePaths) {
-      try {
-        console.log(`Trying path: ${path}`)
-        if (readdirSync(path, { withFileTypes: true }).some(dirent => dirent.isDirectory() && dirent.name.startsWith('GridHealth-Agent-'))) {
-          agentReleasePath = path
-          console.log(`Found agent releases at: ${path}`)
-          break
+    // Fetch releases from GitHub API
+    const githubResponse = await fetch(
+      'https://api.github.com/repos/Arwindpianist/gridhealth/releases',
+      {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'GridHealth-Agent'
         }
-      } catch (error) {
-        console.log(`Path ${path} not accessible:`, error instanceof Error ? error.message : String(error))
-        continue
       }
+    )
+
+    if (!githubResponse.ok) {
+      console.error('GitHub API error:', githubResponse.status, githubResponse.statusText)
+      // Fallback to hardcoded data if GitHub API fails
+      return getFallbackVersions()
     }
+
+    const releases: GitHubRelease[] = await githubResponse.json()
     
-    if (!agentReleasePath) {
-      console.error('No accessible agent release path found')
-      return NextResponse.json(
-        { error: 'No accessible agent release directory found' },
-        { status: 404 }
-      )
-    }
-    
-    // Get all directories in the release folder
-    releases = readdirSync(agentReleasePath, { withFileTypes: true })
-      .filter(dirent => dirent.isDirectory() && dirent.name.startsWith('GridHealth-Agent-'))
-      .map(dirent => {
-        const version = dirent.name.replace('GridHealth-Agent-', '')
-        const zipPath = join(agentReleasePath, `${dirent.name}.zip`)
+    // Filter and map releases to our format
+    const agentVersions: AgentVersion[] = releases
+      .filter(release => release.tag_name.startsWith('v'))
+      .map(release => {
+        // Find the main agent zip file
+        const agentAsset = release.assets.find(asset => 
+          asset.name.includes('GridHealth-Agent') && asset.name.endsWith('.zip')
+        )
         
-        try {
-          const stats = statSync(zipPath)
-          return {
-            version,
-            downloadUrl: `/api/download/agent/${version}`,
-            fileName: `${dirent.name}.zip`,
-            fileSize: stats.size,
-            releaseDate: stats.mtime.toISOString(),
-            releaseNotes: getReleaseNotes(version)
-          }
-        } catch (error) {
-          console.warn(`Could not get stats for ${zipPath}:`, error)
-          return null
+        if (!agentAsset) return null
+        
+        return {
+          version: release.tag_name,
+          downloadUrl: agentAsset.browser_download_url,
+          fileName: agentAsset.name,
+          fileSize: agentAsset.size,
+          releaseDate: release.published_at,
+          releaseNotes: release.body || `GridHealth Agent ${release.tag_name} release`,
+          downloadCount: agentAsset.download_count,
+          githubUrl: `https://github.com/Arwindpianist/gridhealth/releases/tag/${release.tag_name}`
         }
       })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
-      .sort((a, b) => compareVersions(b.version, a.version)) // Sort by version (newest first)
+      .filter((version): version is AgentVersion => version !== null)
+      .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime())
 
-    if (releases.length === 0) {
-      console.error('No agent releases found in directory')
-      return NextResponse.json(
-        { error: 'No agent releases found' },
-        { status: 404 }
-      )
+    if (agentVersions.length === 0) {
+      console.log('No agent releases found, using fallback data')
+      return getFallbackVersions()
     }
 
-    const latestVersion = releases[0]
-    console.log(`Latest version found: ${latestVersion.version}`)
+    const latestVersion = agentVersions[0]
+    console.log(`Latest agent version from GitHub: ${latestVersion.version}`)
     
     return NextResponse.json({
       latest: latestVersion,
-      all: releases,
-      totalReleases: releases.length
+      all: agentVersions,
+      totalReleases: agentVersions.length,
+      source: 'github'
     })
   } catch (error) {
-    console.error('Error getting agent version:', error)
-    return NextResponse.json(
-      { error: 'Failed to get agent version information' },
-      { status: 500 }
-    )
+    console.error('Error fetching GitHub releases:', error)
+    // Fallback to hardcoded data if GitHub API fails
+    return getFallbackVersions()
   }
 }
 
-function getReleaseNotes(version: string): string {
-  const releaseNotes: Record<string, string> = {
-    'v1.0.1': 'Fixed license validation endpoint, improved error handling, and enhanced system tray functionality',
-    'v1.0.0': 'Initial release with system tray application, real-time monitoring, and professional installer'
-  }
+function getFallbackVersions() {
+  console.log('Using fallback version data')
   
-  return releaseNotes[version] || `GridHealth Agent ${version} release`
-}
-
-function compareVersions(a: string, b: string): number {
-  // Remove 'v' prefix and split by dots
-  const aParts = a.replace('v', '').split('.').map(Number)
-  const bParts = b.replace('v', '').split('.').map(Number)
-  
-  // Compare major, minor, patch versions
-  for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-    const aPart = aParts[i] || 0
-    const bPart = bParts[i] || 0
-    
-    if (aPart !== bPart) {
-      return aPart - bPart
+  const fallbackVersions: AgentVersion[] = [
+    {
+      version: "v1.0.1",
+      downloadUrl: "https://github.com/Arwindpianist/gridhealth/releases/download/v1.0.1/GridHealth-Agent-v1.0.1.zip",
+      fileName: "GridHealth-Agent-v1.0.1.zip",
+      fileSize: 73114548,
+      releaseDate: "2025-08-21T16:08:00.000Z",
+      releaseNotes: "Fixed license validation endpoint, improved error handling, and enhanced system tray functionality",
+      downloadCount: 0,
+      githubUrl: "https://github.com/Arwindpianist/gridhealth/releases/tag/v1.0.1"
+    },
+    {
+      version: "v1.0.0",
+      downloadUrl: "https://github.com/Arwindpianist/gridhealth/releases/download/v1.0.0/GridHealth-Agent-v1.0.0.zip",
+      fileName: "GridHealth-Agent-v1.0.0.zip",
+      fileSize: 69259530,
+      releaseDate: "2025-08-21T11:48:00.000Z",
+      releaseNotes: "Initial release with system tray application, real-time monitoring, and professional installer",
+      downloadCount: 0,
+      githubUrl: "https://github.com/Arwindpianist/gridhealth/releases/tag/v1.0.0"
     }
-  }
+  ]
   
-  return 0
+  return NextResponse.json({
+    latest: fallbackVersions[0],
+    all: fallbackVersions,
+    totalReleases: fallbackVersions.length,
+    source: 'fallback'
+  })
 } 
