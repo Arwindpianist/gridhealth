@@ -63,6 +63,25 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Determine if profile is complete based on role and required data
+    let isComplete = false
+    
+    if (user.first_name && user.last_name && userRole?.role) {
+      if (userRole.role === 'individual') {
+        // Individual users are complete if they have name and role
+        isComplete = true
+      } else if (userRole.role === 'organization' && userRole.organization_id && organizationData) {
+        // Organization users need organization details
+        isComplete = true
+      } else if (userRole.role === 'company' && userRole.company_id && companyData) {
+        // Company users need company details
+        isComplete = true
+      } else if (userRole.role === 'admin') {
+        // Admin users are complete if they have name and role
+        isComplete = true
+      }
+    }
+
     return NextResponse.json({
       success: true,
       user: {
@@ -73,7 +92,8 @@ export async function GET(request: NextRequest) {
       },
       userRole: userRole || null,
       organization: organizationData,
-      company: companyData
+      company: companyData,
+      isComplete: isComplete
     })
 
   } catch (error) {
