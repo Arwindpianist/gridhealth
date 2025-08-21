@@ -45,7 +45,28 @@ if not exist "%APPDATA_DIR%\config" mkdir "%APPDATA_DIR%\config"
 
 REM Copy application files
 echo Copying application files...
-copy "GridHealth.Agent.exe" "%INSTALL_DIR%\" >nul
+
+REM Check if executable is in current directory or subdirectory
+if exist "GridHealth.Agent.exe" (
+    echo Found executable in current directory
+    copy "GridHealth.Agent.exe" "%INSTALL_DIR%\" >nul
+) else if exist "GridHealth-Agent-v1.0.0\GridHealth.Agent.exe" (
+    echo Found executable in GridHealth-Agent-v1.0.0 subdirectory
+    copy "GridHealth-Agent-v1.0.0\GridHealth.Agent.exe" "%INSTALL_DIR%\" >nul
+) else (
+    echo ERROR: GridHealth.Agent.exe not found
+    echo.
+    echo Please ensure you have extracted the ZIP file completely.
+    echo The executable should be in the same folder as this installer.
+    echo.
+    echo Current directory: %CD%
+    echo Available files:
+    dir /b
+    echo.
+    pause
+    exit /b 1
+)
+
 if %errorLevel% neq 0 (
     echo ERROR: Failed to copy GridHealth.Agent.exe
     echo Please ensure the executable is in the same directory as this installer
@@ -53,8 +74,26 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-if exist "assets" xcopy "assets" "%INSTALL_DIR%\assets\" /E /I /Y >nul
-if exist "schemas" xcopy "schemas" "%INSTALL_DIR%\schemas\" /E /I /Y >nul
+REM Copy assets and schemas (check both current directory and subdirectory)
+if exist "assets" (
+    echo Copying assets from current directory...
+    xcopy "assets" "%INSTALL_DIR%\assets\" /E /I /Y >nul
+) else if exist "GridHealth-Agent-v1.0.0\assets" (
+    echo Copying assets from subdirectory...
+    xcopy "GridHealth-Agent-v1.0.0\assets" "%INSTALL_DIR%\assets\" /E /I /Y >nul
+) else (
+    echo WARNING: Assets folder not found
+)
+
+if exist "schemas" (
+    echo Copying schemas from current directory...
+    xcopy "schemas" "%INSTALL_DIR%\schemas\" /E /I /Y >nul
+) else if exist "GridHealth-Agent-v1.0.0\schemas" (
+    echo Copying schemas from subdirectory...
+    xcopy "GridHealth-Agent-v1.0.0\schemas" "%INSTALL_DIR%\schemas\" /E /I /Y >nul
+) else (
+    echo WARNING: Schemas folder not found
+)
 
 REM Verify files were copied
 echo Verifying installation...

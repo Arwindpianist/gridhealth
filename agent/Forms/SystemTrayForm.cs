@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using GridHealth.Agent.Models;
 using GridHealth.Agent.Services;
 using System.IO;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 
 namespace GridHealth.Agent.Forms
 {
@@ -120,12 +123,37 @@ namespace GridHealth.Agent.Forms
 
                 if (File.Exists(configPath))
                 {
-                    string json = File.ReadAllText(configPath);
-                    _config = System.Text.Json.JsonSerializer.Deserialize<AgentConfiguration>(json);
-                    
-                    if (_config?.IsConfigured == true)
+                    try
                     {
-                        StartMonitoring();
+                        string json = File.ReadAllText(configPath);
+                        _config = System.Text.Json.JsonSerializer.Deserialize<AgentConfiguration>(json);
+                        
+                        // Only auto-start monitoring if we have a valid, complete configuration
+                        if (_config?.IsConfigured == true && 
+                            !string.IsNullOrEmpty(_config.LicenseKey) &&
+                            !string.IsNullOrEmpty(_config.ApiEndpoint))
+                        {
+                            // Don't auto-start monitoring - let user choose
+                            // StartMonitoring();
+                        }
+                        else
+                        {
+                            // Configuration is incomplete, show config form
+                            ShowConfigurationForm();
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        // Configuration file is corrupted, delete it and show config form
+                        try
+                        {
+                            File.Delete(configPath);
+                        }
+                        catch { }
+                        
+                        MessageBox.Show("Configuration file was corrupted and has been reset.", "Configuration Reset", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ShowConfigurationForm();
                     }
                 }
                 else
