@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Get user and organization info
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
-      .select('email')
+      .select('id, email')
       .eq('clerk_user_id', userId)
       .single()
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const { data: userRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('organization_id, company_id, role')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)  // Use user.id (internal DB ID) instead of userId (Clerk ID)
       .single()
 
     if (roleError) {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       await supabaseAdmin
         .from('user_roles')
         .update({ organization_id: virtualOrg.id })
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
 
       // Check if virtual organization already has an active license
       const { data: existingLicense, error: licenseCheckError } = await supabaseAdmin

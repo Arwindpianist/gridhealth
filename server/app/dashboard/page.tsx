@@ -96,21 +96,23 @@ export default async function DashboardPage() {
       redirect('/dashboard/complete')
     }
 
-    // For organization/company users, check if they have licenses
-    const organizationId = userRole.organization_id || userRole.company_id
-    if (organizationId) {
-      const { data: userLicenses } = await supabaseAdmin
-        .from('licenses')
-        .select('id')
-        .eq('organization_id', organizationId)
-        .limit(1)
+    // For organization/company/owner users, check if they have licenses
+    if (userRole.role === 'organization' || userRole.role === 'company' || userRole.role === 'owner') {
+      const organizationId = userRole.organization_id || userRole.company_id
+      if (organizationId) {
+        const { data: userLicenses } = await supabaseAdmin
+          .from('licenses')
+          .select('id')
+          .eq('organization_id', organizationId)
+          .limit(1)
 
-      if (userLicenses && userLicenses.length > 0) {
-        console.log('✅ Organization has licenses, redirecting to complete dashboard')
-        redirect('/dashboard/complete')
-      } else {
-        console.log('❌ Organization has no licenses, staying on dashboard for license purchase')
-        // Don't redirect, let them stay on dashboard to purchase licenses
+        if (userLicenses && userLicenses.length > 0) {
+          console.log('✅ Organization has licenses, redirecting to complete dashboard')
+          redirect('/dashboard/complete')
+        } else {
+          console.log('❌ Organization has no licenses, staying on dashboard for license purchase')
+          // Don't redirect, let them stay on dashboard to purchase licenses
+        }
       }
     }
   } else {
@@ -124,7 +126,8 @@ export default async function DashboardPage() {
   const hasCompletedProfile = user?.first_name && user?.last_name && 
     (userRole?.role === 'individual' || 
      (userRole?.role === 'company' && userRole.company_id) ||
-     (userRole?.role === 'organization' && userRole.organization_id))
+     (userRole?.role === 'organization' && userRole.organization_id) ||
+     (userRole?.role === 'owner' && (userRole.organization_id || userRole.company_id)))
 
   if (hasCompletedProfile) {
     console.log('✅ User has completed profile, redirecting to complete dashboard')
