@@ -177,17 +177,48 @@ namespace GridHealth.Agent.Forms
             }
             else
             {
+                // StartMonitoring is now async, but we can't make this method async
+                // So we'll call it without awaiting - the validation will happen in StartMonitoring
                 StartMonitoring();
             }
         }
 
-        private void StartMonitoring()
+        private async void StartMonitoring()
         {
             if (_config?.IsConfigured != true)
             {
                 MessageBox.Show("Please configure the agent first.", "Configuration Required", 
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 OpenConfiguration();
+                return;
+            }
+
+            // Validate license before starting monitoring
+            try
+            {
+                var licenseService = new LicenseValidationService();
+                var validationResult = await licenseService.ValidateLicenseAsync(
+                    _config.LicenseKey, 
+                    _config.ApiEndpoint
+                );
+
+                if (!validationResult.IsValid)
+                {
+                    MessageBox.Show($"License validation failed: {validationResult.Message}\n\nPlease reconfigure the agent with a valid license key.", 
+                        "Invalid License", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    OpenConfiguration();
+                    return;
+                }
+
+                // Update configuration with latest license info
+                _config.OrganizationName = validationResult.OrganizationName;
+                _config.DeviceLimit = validationResult.DeviceLimit;
+                _config.LicenseType = validationResult.LicenseType;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error validating license: {ex.Message}\n\nPlease check your internet connection and try again.", 
+                    "License Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -293,11 +324,15 @@ namespace GridHealth.Agent.Forms
             StartMonitoring();
         }
 
+        private int _heartbeatCount = 0;
+        
         private async Task SendHeartbeat()
         {
             try
             {
                 if (!_isMonitoring) return;
+
+                _heartbeatCount++;
 
                 // Create minimal heartbeat data (just to show device is online)
                 var heartbeatData = new
@@ -331,6 +366,12 @@ namespace GridHealth.Agent.Forms
                         {
                             statusItem.Text = $"Status: Online - Last heartbeat: {DateTime.Now:HH:mm}";
                         }
+
+                        // Validate license every 10 heartbeats (every 20 minutes)
+                        if (_heartbeatCount % 10 == 0)
+                        {
+                            await ValidateLicensePeriodically();
+                        }
                     }
                     else
                     {
@@ -352,6 +393,32 @@ namespace GridHealth.Agent.Forms
                     statusItem.Text = $"Status: Network Error - {DateTime.Now:HH:mm}";
                 }
                 Console.WriteLine($"Heartbeat error: {ex.Message}");
+            }
+        }
+
+        private async Task ValidateLicensePeriodically()
+        {
+            try
+            {
+                var licenseService = new LicenseValidationService();
+                var validationResult = await licenseService.ValidateLicenseAsync(
+                    _config.LicenseKey, 
+                    _config.ApiEndpoint
+                );
+
+                if (!validationResult.IsValid)
+                {
+                    // License is no longer valid - stop monitoring
+                    MessageBox.Show($"License validation failed: {validationResult.Message}\n\nMonitoring has been stopped. Please reconfigure the agent with a valid license key.", 
+                        "License Expired", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    StopMonitoring();
+                    OpenConfiguration();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't stop monitoring for network issues
+                Console.WriteLine($"Periodic license validation error: {ex.Message}");
             }
         }
 

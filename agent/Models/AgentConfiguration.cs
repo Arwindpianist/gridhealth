@@ -21,6 +21,9 @@ public class AgentConfiguration
     public string LogLevel { get; set; } = "info";
     public bool IsConfigured { get; set; } = false;
     public DateTime? LastConfigured { get; set; }
+    public string? OrganizationName { get; set; }
+    public int DeviceLimit { get; set; } = 0;
+    public string? LicenseType { get; set; }
     public List<string> CustomChecks { get; set; } = new() { "disk_space", "memory_usage", "critical_services" };
     
     public void UpdateScanInterval()

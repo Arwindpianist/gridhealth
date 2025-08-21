@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
 using GridHealth.Agent.Models;
+using GridHealth.Agent.Services;
 
 namespace GridHealth.Agent.Forms
 {
@@ -204,11 +205,11 @@ namespace GridHealth.Agent.Forms
             }
         }
 
-        private void BtnSave_Click(object sender, EventArgs e)
+        private async void BtnSave_Click(object sender, EventArgs e)
         {
             try
             {
-                // Validate license key
+                // Basic validation
                 if (string.IsNullOrWhiteSpace(txtLicenseKey.Text))
                 {
                     MessageBox.Show("Please enter a valid license key.", "Validation Error", 
@@ -225,6 +226,32 @@ namespace GridHealth.Agent.Forms
                     return;
                 }
 
+                // Show validation progress
+                btnSave.Enabled = false;
+                btnSave.Text = "Validating...";
+                Application.DoEvents();
+
+                // Validate license with API
+                var licenseService = new LicenseValidationService();
+                var validationResult = await licenseService.ValidateLicenseAsync(
+                    txtLicenseKey.Text.Trim(), 
+                    txtApiEndpoint.Text
+                );
+
+                if (!validationResult.IsValid)
+                {
+                    MessageBox.Show($"License validation failed: {validationResult.Message}\n\nPlease enter a valid license key.", 
+                        "Invalid License", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    txtLicenseKey.Focus();
+                    btnSave.Enabled = true;
+                    btnSave.Text = "Save Configuration";
+                    return;
+                }
+
+                // License is valid - show success message
+                MessageBox.Show($"✅ License validated successfully!\n\nOrganization: {validationResult.OrganizationName}\nDevice Limit: {validationResult.DeviceLimit}\nLicense Type: {validationResult.LicenseType}", 
+                    "License Valid", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
                 // Create configuration
                 Configuration = new AgentConfiguration
                 {
@@ -232,7 +259,10 @@ namespace GridHealth.Agent.Forms
                     ScanFrequency = ParseScanFrequency(cboScanFrequency.SelectedItem?.ToString() ?? "Daily"),
                     ApiEndpoint = txtApiEndpoint.Text,
                     IsConfigured = true,
-                    LastConfigured = DateTime.UtcNow
+                    LastConfigured = DateTime.UtcNow,
+                    OrganizationName = validationResult.OrganizationName,
+                    DeviceLimit = validationResult.DeviceLimit,
+                    LicenseType = validationResult.LicenseType
                 };
 
                 // Save configuration
