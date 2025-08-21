@@ -21,11 +21,21 @@ interface Organization {
   subscription_tier?: string
 }
 
+interface AgentVersion {
+  version: string
+  downloadUrl: string
+  fileName: string
+  fileSize: number
+  releaseDate: string
+  releaseNotes: string
+}
+
 export default function DownloadPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const [licenses, setLicenses] = useState<License[]>([])
   const [organization, setOrganization] = useState<Organization | null>(null)
+  const [agentVersion, setAgentVersion] = useState<AgentVersion | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedLicense, setSelectedLicense] = useState<License | null>(null)
   const [showLicenseKey, setShowLicenseKey] = useState(false)
@@ -33,34 +43,42 @@ export default function DownloadPage() {
   // Add meta tags for this page
   useEffect(() => {
     // Update document title and meta tags for this page
-    document.title = 'Download GridHealth Agent v1.0.0 - Enterprise System Health Monitoring'
+    const title = agentVersion 
+      ? `Download GridHealth Agent ${agentVersion.version} - Enterprise System Health Monitoring`
+      : 'Download GridHealth Agent - Enterprise System Health Monitoring'
+    
+    document.title = title
     
     // Update meta description
     const metaDescription = document.querySelector('meta[name="description"]')
     if (metaDescription) {
-      metaDescription.setAttribute('content', 'Download GridHealth Agent v1.0.0 - Professional system health monitoring for Windows. Real-time monitoring, configurable scans, and enterprise-grade features.')
+      const description = agentVersion
+        ? `Download GridHealth Agent ${agentVersion.version} - Professional system health monitoring for Windows. Real-time monitoring, configurable scans, and enterprise-grade features.`
+        : 'Download GridHealth Agent - Professional system health monitoring for Windows. Real-time monitoring, configurable scans, and enterprise-grade features.'
+      metaDescription.setAttribute('content', description)
     }
     
     // Add Open Graph meta tags
     const ogTitle = document.querySelector('meta[property="og:title"]')
     if (ogTitle) {
-      ogTitle.setAttribute('content', 'Download GridHealth Agent v1.0.0')
+      ogTitle.setAttribute('content', title)
     }
     
-    const ogDescription = document.querySelector('meta[property="og:description"]')
+    const ogDescription = document.querySelector('meta[name="property="og:description"]')
     if (ogDescription) {
-      ogDescription.setAttribute('content', 'Download GridHealth Agent v1.0.0 - Professional system health monitoring for Windows. Real-time monitoring, configurable scans, and enterprise-grade features.')
+      ogDescription.setAttribute('content', metaDescription?.getAttribute('content') || '')
     }
     
     const ogUrl = document.querySelector('meta[property="og:url"]')
     if (ogUrl) {
       ogUrl.setAttribute('content', 'https://gridhealth.arwindpianist.store/download')
     }
-  }, [])
+  }, [agentVersion])
 
   useEffect(() => {
     if (isLoaded && user) {
       fetchUserData()
+      fetchAgentVersion()
     } else if (isLoaded && !user) {
       router.push('/login')
     }
@@ -68,7 +86,6 @@ export default function DownloadPage() {
 
   const fetchUserData = async () => {
     try {
-      setIsLoading(true)
       const response = await fetch('/api/licenses')
       
       if (response.ok) {
@@ -78,6 +95,19 @@ export default function DownloadPage() {
       }
     } catch (error) {
       console.error('Error fetching user data:', error)
+    }
+  }
+
+  const fetchAgentVersion = async () => {
+    try {
+      const response = await fetch('/api/agent/version')
+      
+      if (response.ok) {
+        const data = await response.json()
+        setAgentVersion(data.latest)
+      }
+    } catch (error) {
+      console.error('Error fetching agent version:', error)
     } finally {
       setIsLoading(false)
     }
@@ -94,12 +124,14 @@ export default function DownloadPage() {
   }
 
   const downloadAgentFile = () => {
-    // Download the actual GridHealth Agent v1.0.0 package
-    const downloadUrl = 'https://github.com/Arwindpianist/gridhealth/releases/download/v1.0.0/GridHealth-Agent-v1.0.0.zip'
+    if (!agentVersion) return
+    
+    // Download the actual GridHealth Agent package
+    const downloadUrl = `https://gridhealth.arwindpianist.store${agentVersion.downloadUrl}`
     
     const a = document.createElement('a')
     a.href = downloadUrl
-    a.download = 'GridHealth-Agent-v1.0.0.zip'
+    a.download = agentVersion.fileName
     a.target = '_blank'
     document.body.appendChild(a)
     a.click()
@@ -127,13 +159,13 @@ export default function DownloadPage() {
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
             "name": "GridHealth Agent",
-            "version": "1.0.0",
+            "version": agentVersion?.version || "Latest",
             "description": "Professional system health monitoring for Windows workstations and servers",
             "applicationCategory": "BusinessApplication",
             "operatingSystem": "Windows",
-            "downloadUrl": "https://github.com/Arwindpianist/gridhealth/releases/download/v1.0.0/GridHealth-Agent-v1.0.0.zip",
-            "softwareVersion": "1.0.0",
-            "releaseNotes": "Initial release with system tray application, real-time monitoring, and professional installer",
+            "downloadUrl": agentVersion ? `https://gridhealth.arwindpianist.store${agentVersion.downloadUrl}` : "https://gridhealth.arwindpianist.store/download",
+            "softwareVersion": agentVersion?.version || "Latest",
+            "releaseNotes": agentVersion?.releaseNotes || "Professional system health monitoring agent",
             "offers": {
               "@type": "Offer",
               "price": "0",
@@ -153,7 +185,9 @@ export default function DownloadPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-2xl font-bold text-white">Download GridHealth Agent</h1>
+              <h1 className="text-2xl font-bold text-white">
+                Download GridHealth Agent {agentVersion?.version && `(${agentVersion.version})`}
+              </h1>
               <p className="text-dark-300">Get the enterprise-grade system monitoring agent</p>
             </div>
             <div className="flex space-x-4">
@@ -181,6 +215,15 @@ export default function DownloadPage() {
             Professional-grade system health monitoring for Windows workstations and servers. 
             Monitor CPU, memory, disk, network, and service health in real-time.
           </p>
+          {agentVersion && (
+            <div className="mt-4 p-3 bg-blue-900 border border-blue-700 rounded-lg inline-block">
+              <p className="text-blue-200 text-sm">
+                <strong>Latest Version:</strong> {agentVersion.version} • 
+                <strong>Released:</strong> {new Date(agentVersion.releaseDate).toLocaleDateString()} • 
+                <strong>Size:</strong> {(agentVersion.fileSize / (1024 * 1024)).toFixed(1)} MB
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Features Grid */}
@@ -293,7 +336,7 @@ export default function DownloadPage() {
                         onClick={downloadAgentForIndividual}
                         className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors"
                       >
-                        Download v1.0.0 (Free)
+                        Download {agentVersion?.version || 'Latest'} (Free)
                       </button>
                     </div>
                   </div>
@@ -312,7 +355,7 @@ export default function DownloadPage() {
                         onClick={() => downloadAgent(license)}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
                       >
-                        Download v1.0.0
+                        Download {agentVersion?.version || 'Latest'}
                       </button>
                     </div>
                   </div>
@@ -335,7 +378,7 @@ export default function DownloadPage() {
                 <ol className="space-y-3 text-dark-300">
                   <li className="flex items-start">
                     <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">1</span>
-                    <span>Download the GridHealth-Agent-v1.0.0.zip package</span>
+                    <span>Download the {agentVersion?.fileName || 'GridHealth-Agent.zip'} package</span>
                   </li>
                   <li className="flex items-start">
                     <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">2</span>
@@ -442,10 +485,10 @@ export default function DownloadPage() {
             </div>
 
             <div className="mb-4 p-4 bg-green-900 border border-green-700 rounded-lg">
-              <h4 className="text-green-400 font-semibold mb-2">🎉 GridHealth Agent v1.0.0 Released!</h4>
+              <h4 className="text-green-400 font-semibold mb-2">🎉 GridHealth Agent {agentVersion?.version || 'Latest'} Released!</h4>
               <p className="text-green-300 text-sm">
                 Download the complete agent package with professional installer, system tray application, 
-                and real-time monitoring capabilities.
+                and real-time monitoring capabilities. {agentVersion?.releaseNotes && `Latest update: ${agentVersion.releaseNotes}`}
               </p>
             </div>
 
@@ -460,7 +503,7 @@ export default function DownloadPage() {
                 onClick={downloadAgentFile}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
-                Download Agent v1.0.0
+                Download Agent {agentVersion?.version || 'Latest'}
               </button>
             </div>
           </div>

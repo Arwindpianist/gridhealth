@@ -37,7 +37,9 @@ namespace GridHealth.Agent.Services
                 _httpClient.DefaultRequestHeaders.Add("X-License-Key", licenseKey);
 
                 // Send validation request
-                var response = await _httpClient.PostAsync($"{apiEndpoint.TrimEnd('/')}/licenses/validate", content);
+                // Extract base URL from the health endpoint (remove /api/health)
+                var baseUrl = apiEndpoint.Replace("/api/health", "").TrimEnd('/');
+                var response = await _httpClient.PostAsync($"{baseUrl}/api/licenses/validate", content);
 
                 if (response.IsSuccessStatusCode)
                 {
