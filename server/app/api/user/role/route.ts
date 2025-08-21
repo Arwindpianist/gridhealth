@@ -70,20 +70,24 @@ export async function GET(request: NextRequest) {
       if (userRole.role === 'individual') {
         // Individual users are complete if they have all basic info
         isComplete = true
-      } else if (userRole.role === 'organization' && userRole.organization_id && organizationData) {
-        // Organization users need complete organization details
-        const orgComplete = organizationData.name && 
-                           organizationData.description && 
-                           organizationData.contact_email && 
-                           organizationData.contact_phone
-        isComplete = orgComplete
-      } else if (userRole.role === 'company' && userRole.company_id && companyData) {
+      } else if (userRole.role === 'organization' || userRole.role === 'owner') {
+        // Organization users and owners need complete organization details
+        if (userRole.organization_id && organizationData) {
+          const orgComplete = organizationData.name && 
+                             organizationData.description && 
+                             organizationData.contact_email && 
+                             organizationData.contact_phone
+          isComplete = orgComplete
+        }
+      } else if (userRole.role === 'company') {
         // Company users need complete company details
-        const companyComplete = companyData.name && 
-                               companyData.email && 
-                               companyData.phone && 
-                               companyData.address
-        isComplete = companyComplete
+        if (userRole.company_id && companyData) {
+          const companyComplete = companyData.name && 
+                                 companyData.email && 
+                                 companyData.phone && 
+                                 companyData.address
+          isComplete = companyComplete
+        }
       } else if (userRole.role === 'admin') {
         // Admin users are complete if they have all basic info
         isComplete = true
