@@ -18,6 +18,7 @@ interface Organization {
   id: string
   name: string
   subscription_status: string
+  subscription_tier?: string
 }
 
 export default function DownloadPage() {
@@ -28,6 +29,34 @@ export default function DownloadPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedLicense, setSelectedLicense] = useState<License | null>(null)
   const [showLicenseKey, setShowLicenseKey] = useState(false)
+
+  // Add meta tags for this page
+  useEffect(() => {
+    // Update document title and meta tags for this page
+    document.title = 'Download GridHealth Agent v1.0.0 - Enterprise System Health Monitoring'
+    
+    // Update meta description
+    const metaDescription = document.querySelector('meta[name="description"]')
+    if (metaDescription) {
+      metaDescription.setAttribute('content', 'Download GridHealth Agent v1.0.0 - Professional system health monitoring for Windows. Real-time monitoring, configurable scans, and enterprise-grade features.')
+    }
+    
+    // Add Open Graph meta tags
+    const ogTitle = document.querySelector('meta[property="og:title"]')
+    if (ogTitle) {
+      ogTitle.setAttribute('content', 'Download GridHealth Agent v1.0.0')
+    }
+    
+    const ogDescription = document.querySelector('meta[property="og:description"]')
+    if (ogDescription) {
+      ogDescription.setAttribute('content', 'Download GridHealth Agent v1.0.0 - Professional system health monitoring for Windows. Real-time monitoring, configurable scans, and enterprise-grade features.')
+    }
+    
+    const ogUrl = document.querySelector('meta[property="og:url"]')
+    if (ogUrl) {
+      ogUrl.setAttribute('content', 'https://gridhealth.arwindpianist.store/download')
+    }
+  }, [])
 
   useEffect(() => {
     if (isLoaded && user) {
@@ -59,48 +88,22 @@ export default function DownloadPage() {
     setShowLicenseKey(true)
   }
 
+  const downloadAgentForIndividual = () => {
+    // Individual users can download without a license
+    downloadAgentFile()
+  }
+
   const downloadAgentFile = () => {
-    // Create a simple agent configuration file
-    const config = `# GridHealth Agent Configuration
-# Generated on: ${new Date().toISOString()}
-# License Key: ${selectedLicense?.license_key}
-# Organization: ${organization?.name || 'N/A'}
-
-[Agent]
-Name = GridHealth-Monitoring-Agent
-Version = 1.0.0
-LicenseKey = ${selectedLicense?.license_key}
-OrganizationId = ${organization?.id || 'N/A'}
-
-[Monitoring]
-Interval = 30
-Metrics = CPU,Memory,Disk,Network,Services
-
-[API]
-Endpoint = https://gridhealth.arwindpianist.store/api/metrics
-Timeout = 30
-
-[Logging]
-Level = INFO
-Path = C:\\ProgramData\\GridHealth\\logs
-
-# Installation Instructions:
-# 1. Download the GridHealth-Agent.msi file
-# 2. Run the installer as Administrator
-# 3. Enter the license key when prompted
-# 4. The agent will start monitoring automatically
-
-# For support: support@gridhealth.arwindpianist.store`
-
-    const blob = new Blob([config], { type: 'text/plain' })
-    const url = window.URL.createObjectURL(blob)
+    // Download the actual GridHealth Agent v1.0.0 package
+    const downloadUrl = 'https://github.com/Arwindpianist/gridhealth/releases/download/v1.0.0/GridHealth-Agent-v1.0.0.zip'
+    
     const a = document.createElement('a')
-    a.href = url
-    a.download = `gridhealth-agent-config-${selectedLicense?.license_key}.txt`
+    a.href = downloadUrl
+    a.download = 'GridHealth-Agent-v1.0.0.zip'
+    a.target = '_blank'
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
   }
 
   if (isLoading) {
@@ -115,9 +118,38 @@ Path = C:\\ProgramData\\GridHealth\\logs
   }
 
   return (
-    <div className="min-h-screen bg-dark-900">
-      {/* Header */}
-      <div className="bg-dark-800 border-b border-dark-700">
+    <>
+      {/* Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "GridHealth Agent",
+            "version": "1.0.0",
+            "description": "Professional system health monitoring for Windows workstations and servers",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Windows",
+            "downloadUrl": "https://github.com/Arwindpianist/gridhealth/releases/download/v1.0.0/GridHealth-Agent-v1.0.0.zip",
+            "softwareVersion": "1.0.0",
+            "releaseNotes": "Initial release with system tray application, real-time monitoring, and professional installer",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "author": {
+              "@type": "Organization",
+              "name": "GridHealth"
+            }
+          })
+        }}
+      />
+      
+      <div className="min-h-screen bg-dark-900">
+        {/* Header */}
+        <div className="bg-dark-800 border-b border-dark-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
@@ -161,7 +193,7 @@ Path = C:\\ProgramData\\GridHealth\\logs
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">Real-time Monitoring</h3>
             <p className="text-dark-300 text-sm">
-              Continuous monitoring of system performance with configurable scan frequencies (Daily, Weekly, Monthly).
+              Online status updates every 2 minutes + configurable health scan frequencies (Daily, Weekly, Monthly).
             </p>
           </div>
 
@@ -233,7 +265,7 @@ Path = C:\\ProgramData\\GridHealth\\logs
             <p className="text-dark-300">Choose your license and download the agent</p>
           </div>
           <div className="p-6">
-            {licenses.length === 0 ? (
+            {licenses.length === 0 && organization?.subscription_tier !== 'individual' ? (
               <div className="text-center py-8">
                 <svg className="mx-auto h-12 w-12 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
@@ -251,6 +283,23 @@ Path = C:\\ProgramData\\GridHealth\\logs
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Show individual user download option */}
+                {organization?.subscription_tier === 'individual' && (
+                  <div className="p-4 bg-green-900 border border-green-700 rounded-lg">
+                    <div className="text-center">
+                      <h3 className="text-lg font-semibold text-white mb-2">🎉 Individual User Account</h3>
+                      <p className="text-dark-300 mb-4">You can download the GridHealth Agent for free with up to 3 devices.</p>
+                      <button
+                        onClick={downloadAgentForIndividual}
+                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors"
+                      >
+                        Download v1.0.0 (Free)
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Show organization licenses */}
                 {licenses.map((license) => (
                   <div key={license.id} className="flex items-center justify-between p-4 bg-dark-700 rounded-lg border border-dark-600">
                     <div>
@@ -263,7 +312,7 @@ Path = C:\\ProgramData\\GridHealth\\logs
                         onClick={() => downloadAgent(license)}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
                       >
-                        Download Agent
+                        Download v1.0.0
                       </button>
                     </div>
                   </div>
@@ -286,23 +335,27 @@ Path = C:\\ProgramData\\GridHealth\\logs
                 <ol className="space-y-3 text-dark-300">
                   <li className="flex items-start">
                     <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">1</span>
-                    <span>Download the GridHealth-Agent.exe file</span>
+                    <span>Download the GridHealth-Agent-v1.0.0.zip package</span>
                   </li>
                   <li className="flex items-start">
                     <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">2</span>
-                    <span>Run the executable as Administrator</span>
+                    <span>Extract the ZIP file to a folder</span>
                   </li>
                   <li className="flex items-start">
                     <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">3</span>
-                    <span>Enter your license key when prompted</span>
+                    <span>Right-click install.bat and "Run as Administrator"</span>
                   </li>
                   <li className="flex items-start">
                     <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">4</span>
-                    <span>Choose your preferred scan frequency</span>
+                    <span>Follow the installation prompts</span>
                   </li>
                   <li className="flex items-start">
                     <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">5</span>
-                    <span>Click "Start Monitoring" to begin</span>
+                    <span>Right-click the system tray icon to configure</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">6</span>
+                    <span>Enter your license key and scan frequency</span>
                   </li>
                 </ol>
               </div>
@@ -349,8 +402,9 @@ Path = C:\\ProgramData\\GridHealth\\logs
                   <li>• Windows 10 or Windows Server 2016+</li>
                   <li>• 2GB RAM</li>
                   <li>• 100MB free disk space</li>
-                  <li>• .NET 8.0 Runtime</li>
+                  <li>• .NET 8.0 Runtime (included)</li>
                   <li>• Internet connection for API communication</li>
+                  <li>• Administrator privileges for installation</li>
                 </ul>
               </div>
               <div>
@@ -387,6 +441,14 @@ Path = C:\\ProgramData\\GridHealth\\logs
               </p>
             </div>
 
+            <div className="mb-4 p-4 bg-green-900 border border-green-700 rounded-lg">
+              <h4 className="text-green-400 font-semibold mb-2">🎉 GridHealth Agent v1.0.0 Released!</h4>
+              <p className="text-green-300 text-sm">
+                Download the complete agent package with professional installer, system tray application, 
+                and real-time monitoring capabilities.
+              </p>
+            </div>
+
             <div className="flex space-x-3">
               <button
                 onClick={() => setShowLicenseKey(false)}
@@ -396,14 +458,15 @@ Path = C:\\ProgramData\\GridHealth\\logs
               </button>
               <button
                 onClick={downloadAgentFile}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
-                Download Config
+                Download Agent v1.0.0
               </button>
             </div>
           </div>
         </div>
       )}
     </div>
+      </>
   )
 } 

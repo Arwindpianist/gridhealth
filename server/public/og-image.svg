@@ -1,0 +1,85 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0f0f23"/>
+  
+  <!-- Gradient overlay -->
+  <rect width="1200" height="630" fill="url(#gradient)"/>
+  
+  <!-- Grid pattern -->
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e1b4b" stroke-width="1" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  
+  <!-- Main content area -->
+  <rect x="100" y="100" width="1000" height="430" rx="20" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="3"/>
+  
+  <!-- Logo/Icon -->
+  <circle cx="200" cy="200" r="60" fill="url(#logoGradient)"/>
+  <path d="M 170 180 L 190 200 L 170 220 M 190 180 L 210 200 L 190 220" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Title -->
+  <text x="300" y="200" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white">GridHealth</text>
+  
+  <!-- Subtitle -->
+  <text x="300" y="240" font-family="Arial, sans-serif" font-size="24" fill="#a3a3a3">Enterprise System Health Monitoring</text>
+  
+  <!-- Features -->
+  <g transform="translate(150, 300)">
+    <!-- Feature 1 -->
+    <circle cx="30" cy="30" r="15" fill="#8b5cf6"/>
+    <path d="M 20 30 L 26 36 L 40 22" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="60" y="35" font-family="Arial, sans-serif" font-size="18" fill="white">Real-time Monitoring</text>
+    
+    <!-- Feature 2 -->
+    <circle cx="30" cy="80" r="15" fill="#06b6d4"/>
+    <path d="M 20 80 L 26 86 L 40 72" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="60" y="85" font-family="Arial, sans-serif" font-size="18" fill="white">Health Analytics</text>
+    
+    <!-- Feature 3 -->
+    <circle cx="30" cy="130" r="15" fill="#10b981"/>
+    <path d="M 20 130 L 26 136 L 40 122" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="60" y="135" font-family="Arial, sans-serif" font-size="18" fill="white">Enterprise Grade</text>
+  </g>
+  
+  <!-- Right side - Dashboard preview -->
+  <rect x="600" y="300" width="400" height="200" rx="10" fill="#0f172a" stroke="#475569" stroke-width="2"/>
+  
+  <!-- Chart bars -->
+  <rect x="620" y="350" width="30" height="80" fill="#8b5cf6" rx="3"/>
+  <rect x="670" y="320" width="30" height="110" fill="#06b6d4" rx="3"/>
+  <rect x="720" y="360" width="30" height="70" fill="#10b981" rx="3"/>
+  <rect x="770" y="310" width="30" height="120" fill="#f59e0b" rx="3"/>
+  <rect x="820" y="340" width="30" height="90" fill="#ef4444" rx="3"/>
+  <rect x="870" y="330" width="30" height="100" fill="#8b5cf6" rx="3"/>
+  <rect x="920" y="350" width="30" height="80" fill="#06b6d4" rx="3"/>
+  <rect x="970" y="380" width="30" height="50" fill="#10b981" rx="3"/>
+  
+  <!-- Chart labels -->
+  <text x="620" y="450" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Mon</text>
+  <text x="670" y="450" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Tue</text>
+  <text x="720" y="450" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Wed</text>
+  <text x="770" y="450" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Thu</text>
+  <text x="820" y="450" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Fri</text>
+  <text x="870" y="450" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Sat</text>
+  <text x="920" y="450" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Sun</text>
+  <text x="970" y="450" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Mon</text>
+  
+  <!-- URL -->
+  <text x="600" y="580" font-family="Arial, sans-serif" font-size="20" fill="#8b5cf6" text-anchor="middle">gridhealth.arwindpianist.store</text>
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f23;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:0.8" />
+    </linearGradient>
+    
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg> 

@@ -47,9 +47,18 @@ export default function OnboardingPage() {
 
   const checkOnboardingStatus = async () => {
     try {
-      // For now, we'll assume onboarding is needed
-      // The actual check will happen server-side when accessing dashboard
-      console.log('Checking onboarding status for user:', user?.id)
+      const response = await fetch('/api/onboarding/status')
+      if (response.ok) {
+        const status = await response.json()
+        if (status.isComplete) {
+          console.log('✅ User has completed onboarding, redirecting to dashboard')
+          router.push('/dashboard')
+        } else {
+          console.log('❌ User needs onboarding:', status.missingFields)
+        }
+      } else {
+        console.error('❌ Failed to check onboarding status')
+      }
     } catch (error) {
       console.error('Error checking onboarding status:', error)
     }

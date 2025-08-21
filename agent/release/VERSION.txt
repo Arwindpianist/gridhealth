@@ -1,0 +1,31 @@
+GridHealth Agent v1.0.0
+Release Date: 21 August, 2025
+
+This is the first official release of GridHealth Agent.
+
+Key Features:
+- System tray application (no Windows services)
+- Real-time online status monitoring (every 2 minutes)
+- Configurable health scan frequencies (Daily/Weekly/Monthly)
+- Professional installer with Windows integration
+- License key validation
+- Automatic startup with Windows
+
+Package Contents:
+- GridHealth.Agent.exe (9.4MB - self-contained)
+- assets/ (application icons and resources)
+- install.bat (professional installer)
+- README.md (comprehensive documentation)
+
+Installation:
+1. Extract the ZIP file
+2. Right-click install.bat and "Run as administrator"
+3. Follow the prompts
+4. Configure your license key and scan frequency
+
+System Requirements:
+- Windows 10/11 (64-bit)
+- Administrator privileges for installation
+- .NET 8.0 Runtime (included)
+
+SHA256: [See GridHealth-Agent-v1.0.0.sha256 file] 
