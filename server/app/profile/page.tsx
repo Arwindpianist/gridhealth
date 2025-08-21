@@ -63,6 +63,17 @@ export default function ProfilePage() {
       return
     }
 
+    // Validate company/organization name if selected
+    if (profile.account_type === 'company' && !profile.company_name?.trim()) {
+      setMessage('Company name is required for company accounts')
+      return
+    }
+
+    if (profile.account_type === 'organization' && !profile.organization_name?.trim()) {
+      setMessage('Organization name is required for organization accounts')
+      return
+    }
+
     setIsLoading(true)
     try {
       const response = await fetch('/api/onboarding', {
@@ -76,7 +87,7 @@ export default function ProfilePage() {
       if (response.ok) {
         setMessage('Profile updated successfully!')
         setTimeout(() => {
-          router.push('/dashboard')
+          router.push('/profile/complete')
         }, 1500)
       } else {
         const errorData = await response.json()
@@ -199,6 +210,33 @@ export default function ProfilePage() {
                 </label>
               </div>
             </div>
+
+            {/* Company/Organization Details */}
+            {(profile.account_type === 'company' || profile.account_type === 'organization') && (
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  {profile.account_type === 'company' ? 'Company' : 'Organization'} Details
+                </h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    {profile.account_type === 'company' ? 'Company' : 'Organization'} Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={profile.account_type === 'company' ? profile.company_name : profile.organization_name}
+                    onChange={(e) => {
+                      if (profile.account_type === 'company') {
+                        updateProfile('company_name', e.target.value)
+                      } else {
+                        updateProfile('organization_name', e.target.value)
+                      }
+                    }}
+                    className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
+                    placeholder={`Enter ${profile.account_type === 'company' ? 'company' : 'organization'} name`}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Organization/Company Details */}
             {(profile.account_type === 'organization' || profile.account_type === 'company') && (

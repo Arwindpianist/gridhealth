@@ -117,6 +117,17 @@ export default async function DashboardPage() {
       // Allow access to basic dashboard for license purchase
     }
 
+    // Check if user has completed their profile
+    const hasCompletedProfile = user?.first_name && user?.last_name && 
+      (userRole?.role === 'individual' || 
+       (userRole?.role === 'company' && userRole.company_id) ||
+       (userRole?.role === 'organization' && userRole.organization_id))
+
+    if (hasCompletedProfile) {
+      console.log('✅ User has completed profile, redirecting to complete dashboard')
+      redirect('/dashboard/complete')
+    }
+
     // If we get here, user has basic profile info but may not have completed full onboarding
     // Allow them to stay on the dashboard to purchase licenses
     console.log('✅ User can access dashboard for license purchase')
@@ -135,7 +146,7 @@ export default async function DashboardPage() {
               <div className="flex space-x-4">
                 <a 
                   href="/profile" 
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="bg-gridhealth-600 hover:bg-gridhealth-700 text-white px-4 py-2 rounded-lg transition-colors"
                 >
                   Complete Profile
                 </a>
