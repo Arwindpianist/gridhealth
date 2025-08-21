@@ -307,7 +307,7 @@ export async function POST(request: NextRequest) {
                 contact_email: contact_email || null,
                 contact_phone: contact_phone || null,
                 address: address || null,
-                device_limit: 3
+
               })
               .select()
               .single()

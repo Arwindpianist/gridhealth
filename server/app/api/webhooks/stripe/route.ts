@@ -76,23 +76,61 @@ async function handleCheckoutSessionCompleted(session: any) {
       price_myr
     })
 
-    // Create license record
-    const { data: license, error: licenseError } = await supabaseAdmin
+    // Check if organization already has a license
+    const { data: existingLicense, error: existingError } = await supabaseAdmin
       .from('licenses')
-      .insert({
-        organization_id: organization_id,
-        license_key: licenseKey,
-        device_limit: parseInt(device_limit),
-        price_myr: parseFloat(price_myr),
-        status: 'active',
-        tier: tier,
-        stripe_subscription_id: session.subscription,
-        stripe_customer_id: session.customer,
-        expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
-        created_at: new Date().toISOString()
-      })
-      .select()
+      .select('*')
+      .eq('organization_id', organization_id)
+      .eq('status', 'active')
       .single()
+
+    let license
+    let licenseError
+
+    if (existingLicense) {
+      // Update existing license with additional devices
+      console.log('🔄 Updating existing license with additional devices')
+      const newDeviceLimit = existingLicense.device_limit + parseInt(device_limit)
+      
+      const { data: updatedLicense, error: updateError } = await supabaseAdmin
+        .from('licenses')
+        .update({
+          device_limit: newDeviceLimit,
+          price_myr: existingLicense.price_myr + parseFloat(price_myr),
+          expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingLicense.id)
+        .select()
+        .single()
+
+      license = updatedLicense
+      licenseError = updateError
+      
+      console.log(`✅ License updated: ${existingLicense.device_limit} → ${newDeviceLimit} devices`)
+    } else {
+      // Create new license record
+      console.log('🆕 Creating new license record')
+      const { data: newLicense, error: createError } = await supabaseAdmin
+        .from('licenses')
+        .insert({
+          organization_id: organization_id,
+          license_key: licenseKey,
+          device_limit: parseInt(device_limit),
+          price_myr: parseFloat(price_myr),
+          status: 'active',
+          tier: tier,
+          stripe_subscription_id: session.subscription,
+          stripe_customer_id: session.customer,
+          expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      license = newLicense
+      licenseError = createError
+    }
 
     if (licenseError) {
       console.error('❌ Error creating license:', licenseError)
@@ -105,7 +143,7 @@ async function handleCheckoutSessionCompleted(session: any) {
     const { error: orgError } = await supabaseAdmin
       .from('organizations')
       .update({
-        device_limit: parseInt(device_limit),
+        device_limit: license.device_limit, // Use the aggregated device limit
         subscription_status: 'active',
         subscription_tier: tier,
         subscription_expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),

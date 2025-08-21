@@ -9,22 +9,31 @@ interface UserProfile {
   first_name: string
   last_name: string
   phone: string
-  account_type?: string
-  organization_name?: string
-  company_name?: string
+  account_type: string
+  organization_name: string
+  company_name: string
+  description: string
+  address: string
+  contact_email: string
+  contact_phone: string
 }
 
 export default function ProfilePage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [profile, setProfile] = useState<UserProfile>({
     first_name: '',
     last_name: '',
     phone: '',
     account_type: 'individual',
     organization_name: '',
-    company_name: ''
+    company_name: '',
+    description: '',
+    address: '',
+    contact_email: '',
+    contact_phone: ''
   })
   const [message, setMessage] = useState('')
 
@@ -35,26 +44,70 @@ export default function ProfilePage() {
   }, [isLoaded, user])
 
   const loadProfile = async () => {
+    setIsLoading(true)
     try {
-      const response = await fetch('/api/onboarding/status')
+      const response = await fetch('/api/user/role')
       if (response.ok) {
-        const status = await response.json()
-        if (status.user) {
-          setProfile(prev => ({
-            ...prev,
-            first_name: status.user.first_name || '',
-            last_name: status.user.last_name || '',
-            phone: status.user.phone || ''
-          }))
+        const data = await response.json()
+        
+        if (data.user) {
+          const profileData: UserProfile = {
+            first_name: data.user.first_name || '',
+            last_name: data.user.last_name || '',
+            phone: data.user.phone || '',
+            account_type: 'individual', // default
+            organization_name: '',
+            company_name: '',
+            description: '',
+            address: '',
+            contact_email: '',
+            contact_phone: ''
+          }
+
+          // Determine account type and populate data based on role
+          if (data.userRole) {
+            if (data.userRole.role === 'admin') {
+              profileData.account_type = 'admin'
+            } else if (data.userRole.role === 'individual') {
+              profileData.account_type = 'individual'
+            } else if (data.userRole.company_id && data.company) {
+              profileData.account_type = 'company'
+              profileData.company_name = data.company.name || ''
+              profileData.address = data.company.address || ''
+              profileData.contact_email = data.company.email || ''
+              profileData.contact_phone = data.company.phone || ''
+            } else if (data.userRole.organization_id && data.organization) {
+              // Check if it's a virtual organization for individual users
+              if (data.organization.name?.includes('Individual Account')) {
+                profileData.account_type = 'individual'
+              } else {
+                profileData.account_type = 'organization'
+                profileData.organization_name = data.organization.name || ''
+                profileData.description = data.organization.description || ''
+                profileData.address = data.organization.address || ''
+                profileData.contact_email = data.organization.contact_email || ''
+                profileData.contact_phone = data.organization.contact_phone || ''
+              }
+            }
+          }
+
+          setProfile(profileData)
         }
+      } else {
+        console.error('Failed to load profile data')
+        setMessage('Failed to load profile data')
       }
     } catch (error) {
       console.error('Error loading profile:', error)
+      setMessage('Error loading profile data')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const updateProfile = (field: keyof UserProfile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }))
+    setMessage('') // Clear any existing messages
   }
 
   const saveProfile = async () => {
@@ -74,7 +127,7 @@ export default function ProfilePage() {
       return
     }
 
-    setIsLoading(true)
+    setIsSaving(true)
     try {
       const response = await fetch('/api/onboarding', {
         method: 'POST',
@@ -96,16 +149,16 @@ export default function ProfilePage() {
     } catch (error) {
       setMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
-      setIsLoading(false)
+      setIsSaving(false)
     }
   }
 
-  if (!isLoaded) {
+  if (!isLoaded || isLoading) {
     return (
       <div className="min-h-screen bg-dark-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gridhealth-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading...</p>
+          <p className="text-gray-400">Loading profile...</p>
         </div>
       </div>
     )
@@ -179,6 +232,17 @@ export default function ProfilePage() {
                   <input
                     type="radio"
                     name="account_type"
+                    value="admin"
+                    checked={profile.account_type === 'admin'}
+                    onChange={(e) => updateProfile('account_type', e.target.value)}
+                    className="mr-3 text-gridhealth-500 focus:ring-gridhealth-500"
+                  />
+                  <span className="text-gray-300">Admin Account</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="account_type"
                     value="individual"
                     checked={profile.account_type === 'individual'}
                     onChange={(e) => updateProfile('account_type', e.target.value)}
@@ -195,7 +259,7 @@ export default function ProfilePage() {
                     onChange={(e) => updateProfile('account_type', e.target.value)}
                     className="mr-3 text-gridhealth-500 focus:ring-gridhealth-500"
                   />
-                  <span className="text-gray-300">Organization Account</span>
+                  <span className="text-gray-500">Organization Account</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -211,56 +275,132 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Company/Organization Details */}
-            {(profile.account_type === 'company' || profile.account_type === 'organization') && (
+            {/* Organization Details */}
+            {profile.account_type === 'organization' && (
               <div>
-                <h3 className="text-lg font-semibold text-white mb-4">
-                  {profile.account_type === 'company' ? 'Company' : 'Organization'} Details
-                </h3>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    {profile.account_type === 'company' ? 'Company' : 'Organization'} Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.account_type === 'company' ? profile.company_name : profile.organization_name}
-                    onChange={(e) => {
-                      if (profile.account_type === 'company') {
-                        updateProfile('company_name', e.target.value)
-                      } else {
-                        updateProfile('organization_name', e.target.value)
-                      }
-                    }}
-                    className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
-                    placeholder={`Enter ${profile.account_type === 'company' ? 'company' : 'organization'} name`}
-                  />
+                <h3 className="text-lg font-semibold text-white mb-4">Organization Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Organization Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={profile.organization_name}
+                      onChange={(e) => updateProfile('organization_name', e.target.value)}
+                      className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
+                      placeholder="Enter organization name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Description (Optional)
+                    </label>
+                    <textarea
+                      value={profile.description}
+                      onChange={(e) => updateProfile('description', e.target.value)}
+                      className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
+                      placeholder="Describe your organization"
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Address (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={profile.address}
+                      onChange={(e) => updateProfile('address', e.target.value)}
+                      className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
+                      placeholder="Enter organization address"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Contact Email (Optional)
+                      </label>
+                      <input
+                        type="email"
+                        value={profile.contact_email}
+                        onChange={(e) => updateProfile('contact_email', e.target.value)}
+                        className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
+                        placeholder="contact@organization.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Contact Phone (Optional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={profile.contact_phone}
+                        onChange={(e) => updateProfile('contact_phone', e.target.value)}
+                        className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
+                        placeholder="Contact phone number"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Organization/Company Details */}
-            {(profile.account_type === 'organization' || profile.account_type === 'company') && (
+            {/* Company Details */}
+            {profile.account_type === 'company' && (
               <div>
-                <h3 className="text-lg font-semibold text-white mb-4">
-                  {profile.account_type === 'organization' ? 'Organization' : 'Company'} Details
-                </h3>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    {profile.account_type === 'organization' ? 'Organization' : 'Company'} Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.account_type === 'organization' ? profile.organization_name : profile.company_name}
-                    onChange={(e) => {
-                      if (profile.account_type === 'organization') {
-                        updateProfile('organization_name', e.target.value)
-                      } else {
-                        updateProfile('company_name', e.target.value)
-                      }
-                    }}
-                    className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
-                    placeholder={`Enter ${profile.account_type === 'organization' ? 'organization' : 'company'} name`}
-                  />
+                <h3 className="text-lg font-semibold text-white mb-4">Company Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Company Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={profile.company_name}
+                      onChange={(e) => updateProfile('company_name', e.target.value)}
+                      className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
+                      placeholder="Enter company name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Address (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={profile.address}
+                      onChange={(e) => updateProfile('address', e.target.value)}
+                      className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
+                      placeholder="Enter company address"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Contact Email (Optional)
+                      </label>
+                      <input
+                        type="email"
+                        value={profile.contact_email}
+                        onChange={(e) => updateProfile('contact_email', e.target.value)}
+                        className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
+                        placeholder="contact@company.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Contact Phone (Optional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={profile.contact_phone}
+                        onChange={(e) => updateProfile('contact_phone', e.target.value)}
+                        className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gridhealth-500 focus:border-gridhealth-500"
+                        placeholder="Contact phone number"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -268,7 +408,9 @@ export default function ProfilePage() {
             {/* Message */}
             {message && (
               <div className={`p-4 rounded-lg ${
-                message.includes('Error') ? 'bg-red-900 text-red-200' : 'bg-green-900 text-green-200'
+                message.includes('Error') || message.includes('Failed') 
+                  ? 'bg-red-900 text-red-200' 
+                  : 'bg-green-900 text-green-200'
               }`}>
                 {message}
               </div>
@@ -278,16 +420,16 @@ export default function ProfilePage() {
             <div className="flex space-x-4 pt-6">
               <Link
                 href="/dashboard"
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg text-center transition-colors"
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-center py-3 px-6 rounded-lg transition-colors"
               >
                 Cancel
               </Link>
               <button
                 onClick={saveProfile}
-                disabled={isLoading}
-                className="flex-1 bg-gridhealth-600 hover:bg-gridhealth-700 disabled:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors"
+                disabled={isSaving}
+                className="flex-1 bg-gridhealth-600 hover:bg-gridhealth-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg transition-colors"
               >
-                {isLoading ? 'Saving...' : 'Save Profile'}
+                {isSaving ? 'Saving...' : 'Save Profile'}
               </button>
             </div>
           </div>

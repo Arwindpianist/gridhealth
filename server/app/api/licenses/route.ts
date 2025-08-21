@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
           name: 'Individual Account',
           subscription_status: 'active',
           subscription_tier: 'individual',
-          device_limit: 3
+          device_limit: 0 // No licenses purchased yet
         }
       })
     }
@@ -57,15 +57,33 @@ export async function GET(request: NextRequest) {
     if (userRole.role === 'individual') {
       console.log('👤 Individual user accessing licenses')
       
+      // Get the single aggregated license for individual users (they use virtual organizations)
+      let individualLicenses: any[] = []
+      let totalDeviceLimit = 0
+      
+      if (userRole.organization_id) {
+        const { data: license, error: licensesError } = await supabaseAdmin
+          .from('licenses')
+          .select('*')
+          .eq('organization_id', userRole.organization_id)
+          .eq('status', 'active')
+          .single()
+        
+        if (!licensesError && license) {
+          individualLicenses = [license]
+          totalDeviceLimit = license.device_limit || 0
+        }
+      }
+      
       return NextResponse.json({
         success: true,
-        licenses: [],
+        licenses: individualLicenses,
         organization: {
           id: 'individual',
           name: 'Individual Account',
-          subscription_status: 'active',
-          subscription_tier: 'individual',
-          device_limit: 3
+          subscription_status: individualLicenses.length > 0 ? 'active' : 'inactive',
+          subscription_tier: individualLicenses.length > 0 ? 'individual' : null,
+          device_limit: totalDeviceLimit // Calculated from actual licenses
         }
       })
     }
@@ -89,29 +107,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    // Get licenses for the organization
-    const { data: licenses, error: licensesError } = await supabaseAdmin
+    // Get the single aggregated license for the organization
+    const { data: license, error: licensesError } = await supabaseAdmin
       .from('licenses')
       .select('*')
       .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false })
+      .eq('status', 'active')
+      .single()
 
-    if (licensesError) {
-      console.error('❌ Error fetching licenses:', licensesError)
-      return NextResponse.json({ error: 'Failed to fetch licenses' }, { status: 500 })
+    if (licensesError && licensesError.code !== 'PGRST116') {
+      console.error('❌ Error fetching license:', licensesError)
+      return NextResponse.json({ error: 'Failed to fetch license' }, { status: 500 })
     }
+
+    // Convert single license to array format for consistency
+    const licenses = license ? [license] : []
 
     console.log('✅ Licenses fetched successfully:', licenses?.length || 0)
 
+    // Calculate total device limit from actual licenses, not from organization table
+    const totalDeviceLimit = (licenses || []).reduce((sum, license) => sum + (license.device_limit || 0), 0)
+    const subscriptionStatus = (licenses || []).length > 0 ? 'active' : 'inactive'
+    
     return NextResponse.json({
       success: true,
       licenses: licenses || [],
       organization: {
         id: organization.id,
         name: organization.name,
-        subscription_status: organization.subscription_status || 'inactive',
-        subscription_tier: organization.subscription_tier || null,
-        device_limit: organization.device_limit || 0
+        subscription_status: subscriptionStatus,
+        subscription_tier: (licenses || []).length > 0 ? 'premium' : null,
+        device_limit: totalDeviceLimit // Calculated from actual licenses, not hard-coded
       }
     })
 
