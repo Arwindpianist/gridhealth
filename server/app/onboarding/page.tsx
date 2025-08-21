@@ -38,31 +38,12 @@ export default function OnboardingPage() {
   })
   const [selectedLicenseTier, setSelectedLicenseTier] = useState<'basic' | 'standard' | 'professional' | 'enterprise'>('standard')
 
-  // Check if user has already completed onboarding
+  // Onboarding is now optional - don't auto-redirect
   useEffect(() => {
     if (isLoaded && user) {
-      checkOnboardingStatus()
+      console.log('✅ User loaded, onboarding is optional')
     }
   }, [isLoaded, user])
-
-  const checkOnboardingStatus = async () => {
-    try {
-      const response = await fetch('/api/onboarding/status')
-      if (response.ok) {
-        const status = await response.json()
-        if (status.isComplete) {
-          console.log('✅ User has completed onboarding, redirecting to dashboard')
-          router.push('/dashboard')
-        } else {
-          console.log('❌ User needs onboarding:', status.missingFields)
-        }
-      } else {
-        console.error('❌ Failed to check onboarding status')
-      }
-    } catch (error) {
-      console.error('Error checking onboarding status:', error)
-    }
-  }
 
   const updateProfile = (field: keyof UserProfile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }))

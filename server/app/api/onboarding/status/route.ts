@@ -18,11 +18,12 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error || !user) {
-      console.log('❌ User not found in database, needs onboarding')
+      console.log('⚠️ User not found in database, but onboarding is optional')
       return NextResponse.json({ 
-        needsOnboarding: true,
-        isComplete: false,
-        missingFields: ['first_name', 'last_name', 'phone']
+        needsOnboarding: false,
+        isComplete: true,
+        missingFields: [],
+        userRole: null
       })
     }
 
@@ -45,25 +46,15 @@ export async function GET(request: NextRequest) {
       console.log('⚠️ Database error, but user may have completed onboarding')
     } else if (!userRole) {
       console.log('⚠️ No user role found, but user has basic profile')
-      // Only mark as incomplete if user was created recently
-      const userCreatedAt = user.created_at || new Date().toISOString()
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
-      
-      if (userCreatedAt > fiveMinutesAgo) {
-        console.log('⏰ User created recently, needs onboarding')
-        missingFields.push('role_assignment')
-      } else {
-        console.log('⏰ User created more than 5 minutes ago, allowing access')
-        // Don't add to missing fields, allow access
-      }
+      console.log('✅ Onboarding is optional, allowing access')
+      // Don't add to missing fields, allow access
     } else {
       console.log('✅ User role found:', userRole.role)
     }
 
-    // Consider onboarding complete if user has basic info and either has a role or was created more than 5 minutes ago
+    // Consider onboarding complete if user has basic info (onboarding is optional)
     const hasBasicInfo = user.first_name && user.last_name
-    const hasRoleOrOldEnough = userRole || (user.created_at && new Date(user.created_at) < new Date(Date.now() - 5 * 60 * 1000))
-    const isComplete = hasBasicInfo && hasRoleOrOldEnough
+    const isComplete = hasBasicInfo || true // Always allow access
 
     console.log('🔍 Onboarding status check:', {
       userId,

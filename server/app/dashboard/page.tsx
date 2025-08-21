@@ -12,28 +12,47 @@ export default async function DashboardPage() {
 
   try {
     // Check if user has completed onboarding
-    const { data: user, error } = await supabaseAdmin
+    let { data: user, error } = await supabaseAdmin
       .from('users')
       .select('id, first_name, last_name, phone, created_at')
       .eq('clerk_user_id', userId)
       .single()
 
     if (error || !user) {
-      redirect('/onboarding')
+      // Create a basic user profile if none exists
+      console.log('⚠️ User not found in database, creating basic profile')
+      const { data: newUser, error: createError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          clerk_user_id: userId,
+          first_name: 'User',
+          last_name: 'Account',
+          phone: null
+        })
+        .select()
+        .single()
+
+      if (createError) {
+        console.error('❌ Error creating user profile:', createError)
+        // Continue anyway, don't block access
+      } else {
+        console.log('✅ Basic user profile created')
+        user = newUser
+      }
     }
 
     // Check if required fields are filled (phone is optional)
-    const hasRequiredFields = user.first_name && user.last_name
+    const hasRequiredFields = user?.first_name && user?.last_name
     if (!hasRequiredFields) {
-      console.log('❌ Missing required fields, redirecting to onboarding')
-      redirect('/onboarding')
+      console.log('⚠️ Missing required fields, but allowing dashboard access')
+      // Don't redirect, allow access to dashboard
     }
 
     // Check if user has a role assigned (indicating onboarding is complete)
     const { data: userRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role, organization_id, company_id')
-      .eq('user_id', user.id)
+      .eq('user_id', user?.id)
       .single()
 
     if (roleError && roleError.code !== 'PGRST116') {
@@ -76,19 +95,8 @@ export default async function DashboardPage() {
     } else {
       console.log('⚠️ No user role found, but user has basic profile info')
       console.log('🔄 This might indicate onboarding is in progress or incomplete')
-      
-      // Check if user has been created recently (within last 5 minutes)
-      // If so, give them time to complete onboarding
-      const userCreatedAt = user.created_at || new Date().toISOString()
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
-      
-      if (userCreatedAt > fiveMinutesAgo) {
-        console.log('⏰ User created recently, redirecting to onboarding')
-        redirect('/onboarding')
-      } else {
-        console.log('⏰ User created more than 5 minutes ago, allowing dashboard access')
-        // Allow access to basic dashboard for license purchase
-      }
+      console.log('✅ Allowing dashboard access for license purchase')
+      // Allow access to basic dashboard for license purchase
     }
 
     // If we get here, user has basic profile info but may not have completed full onboarding
@@ -97,6 +105,7 @@ export default async function DashboardPage() {
 
   } catch (error) {
     console.error('Error checking user status:', error)
-    redirect('/onboarding')
+    // Don't redirect to onboarding, allow access to dashboard
+    console.log('⚠️ Error occurred, but allowing dashboard access')
   }
 } 
