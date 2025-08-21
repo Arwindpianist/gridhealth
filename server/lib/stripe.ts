@@ -60,8 +60,8 @@ export async function createLicenseCheckoutSession(
         total_price: (cycle.price * deviceCount).toString(),
       },
     },
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/complete?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://gridhealth.arwindpianist.store'}/dashboard/complete?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://gridhealth.arwindpianist.store'}/pricing`,
     metadata: {
       organization_id: organizationId,
       billing_cycle: billingCycle,
