@@ -8,7 +8,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "node run-tests.js",
+    "test:health": "node run-tests.js health",
+    "test:purchase": "node run-tests.js purchase",
+    "test:webhook": "node run-tests.js webhook",
+    "test:e2e": "node run-tests.js e2e",
+    "test:all": "node run-tests.js all"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.31.1",

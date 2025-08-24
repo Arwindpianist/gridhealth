@@ -461,7 +461,7 @@ namespace GridHealth.Agent.Forms
                 if (healthData != null)
                 {
                     // Send to API
-                    var result = await _apiClient.SendHealthDataAsync(healthData);
+                    var result = await _apiClient.SendHealthDataAsync(healthData, _config.ApiEndpoint);
                     if (result)
                     {
                         // Update status

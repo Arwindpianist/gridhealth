@@ -149,7 +149,7 @@ namespace GridHealth.Agent.Forms
             this.txtApiEndpoint.ForeColor = Color.FromArgb(156, 163, 175); // Gray-400
             this.txtApiEndpoint.BorderStyle = BorderStyle.FixedSingle;
             this.txtApiEndpoint.ReadOnly = true;
-            this.txtApiEndpoint.Text = "https://gridhealth.arwindpianist.store/api/health";
+            this.txtApiEndpoint.Text = "https://gridhealth.arwindpianist.store";
             this.configPanel.Controls.Add(this.txtApiEndpoint);
 
             // IT Team Note

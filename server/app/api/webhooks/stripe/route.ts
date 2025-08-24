@@ -47,21 +47,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true })
   } catch (error) {
     console.error('💥 Error processing webhook:', error)
+    console.error('📋 Event data that caused error:', JSON.stringify(event, null, 2))
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
 }
 
 async function handleCheckoutSessionCompleted(session: any) {
   console.log('✅ Checkout session completed:', session.id)
+  console.log('📋 Session data:', JSON.stringify(session, null, 2))
   
-  const {
-    customer_email,
-    subscription: subscriptionId,
-    metadata: { organization_id, billing_cycle, device_count, price_per_device, total_price }
-  } = session
+  // Safely extract metadata with fallbacks
+  const metadata = session.metadata || {}
+  const organization_id = metadata.organization_id
+  const billing_cycle = metadata.billing_cycle
+  const device_count = metadata.device_count
+  const price_per_device = metadata.price_per_device
+  const total_price = metadata.total_price
+  
+  const customer_email = session.customer_email
+  const subscriptionId = session.subscription
 
   if (!organization_id || !device_count || !billing_cycle) {
-    console.error('❌ Missing metadata in session:', session.metadata)
+    console.error('❌ Missing required metadata in session:', {
+      organization_id,
+      device_count,
+      billing_cycle,
+      metadata: session.metadata
+    })
     return
   }
 

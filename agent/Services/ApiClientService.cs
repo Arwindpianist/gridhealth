@@ -14,7 +14,7 @@ public class ApiClientService : IApiClientService
         _logger = logger;
     }
 
-    public async Task<bool> SendHealthDataAsync(HealthData healthData)
+    public async Task<bool> SendHealthDataAsync(HealthData healthData, string apiEndpoint)
     {
         _logger.LogInformation("Sending health data to API");
         Console.WriteLine("📡 Sending health data to API...");
@@ -37,7 +37,7 @@ public class ApiClientService : IApiClientService
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             
             // Send to health endpoint
-            var response = await client.PostAsync("https://gridhealth.arwindpianist.store/api/health", content);
+            var response = await client.PostAsync($"{apiEndpoint}/api/health", content);
             
             if (response.IsSuccessStatusCode)
             {

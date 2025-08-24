@@ -101,7 +101,7 @@ namespace GridHealth.Agent.Services
                 if (healthData != null)
                 {
                     // Send to API
-                    var result = await _apiClient.SendHealthDataAsync(healthData);
+                    var result = await _apiClient.SendHealthDataAsync(healthData, _config.ApiEndpoint);
                     if (result)
                     {
                         _logger.LogInformation("Health data sent successfully");

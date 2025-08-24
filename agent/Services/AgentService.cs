@@ -76,7 +76,7 @@ public class AgentService : BackgroundService, IAgentService
                 Console.WriteLine($"   Network: {healthData.NetworkHealth.NetworkAdapterCount} adapters");
                 
                 Console.WriteLine("📡 Attempting to send data to API...");
-                await _apiClient.SendHealthDataAsync(healthData);
+                await _apiClient.SendHealthDataAsync(healthData, _config.Value.ApiEndpoint);
                 Console.WriteLine("✅ Health data sent successfully!");
                 
                 _logger.LogDebug("Health scan completed, waiting {Interval} until next scan", scanInterval);

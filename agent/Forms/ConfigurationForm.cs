@@ -124,7 +124,7 @@ namespace GridHealth.Agent.Forms
                 ForeColor = Color.FromArgb(156, 163, 175), // Gray-400
                 BorderStyle = BorderStyle.FixedSingle,
                 ReadOnly = true,
-                Text = "https://gridhealth.arwindpianist.store/api/health"
+                Text = "https://gridhealth.arwindpianist.store"
             };
 
             // Note

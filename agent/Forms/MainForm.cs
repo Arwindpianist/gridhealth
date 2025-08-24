@@ -41,7 +41,7 @@ namespace GridHealth.Agent.Forms
                 {
                     LicenseKey = "",
                     ScanFrequency = ScanFrequency.Daily,
-                    ApiEndpoint = "https://gridhealth.arwindpianist.store/api/health",
+                    ApiEndpoint = "https://gridhealth.arwindpianist.store",
                     DeviceId = GenerateDeviceId()
                 };
 
@@ -58,7 +58,7 @@ namespace GridHealth.Agent.Forms
                 {
                     LicenseKey = "",
                     ScanFrequency = ScanFrequency.Daily,
-                    ApiEndpoint = "https://gridhealth.arwindpianist.store/api/health",
+                    ApiEndpoint = "https://gridhealth.arwindpianist.store",
                     DeviceId = GenerateDeviceId()
                 };
             }
