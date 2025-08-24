@@ -120,6 +120,9 @@ obj/
 *.zip
 *.nupkg
 
+# Allow zip files in public folder for downloads
+!public/**/*.zip
+
 # Windows
 *.lnk
 *.tmp
