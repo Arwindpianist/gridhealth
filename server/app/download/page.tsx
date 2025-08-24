@@ -395,21 +395,21 @@ export default function DownloadPage() {
                   </p>
                   <div className="space-y-2">
                     <p className="text-yellow-200 text-sm">
-                      <strong>Latest Version:</strong> v1.0.1 (Fixed license validation)
+                      <strong>Latest Version:</strong> v1.0.2 (Fixed license validation issue)
                     </p>
                     <p className="text-yellow-200 text-sm">
-                      <strong>File Size:</strong> ~73 MB
+                      <strong>File Size:</strong> ~70 MB
                     </p>
                     <p className="text-yellow-200 text-sm">
-                      <strong>Release Date:</strong> August 21, 2025
+                      <strong>Release Date:</strong> August 24, 2025
                     </p>
                   </div>
                   <button
                     onClick={() => {
-                      const downloadUrl = 'https://gridhealth.arwindpianist.store/api/download/agent/v1.0.1'
+                      const downloadUrl = 'https://gridhealth.arwindpianist.store/api/download/agent/v1.0.2'
                       const a = document.createElement('a')
                       a.href = downloadUrl
-                      a.download = 'GridHealth-Agent-v1.0.1.zip'
+                      a.download = 'GridHealth-Agent-v1.0.2.zip'
                       a.target = '_blank'
                       document.body.appendChild(a)
                       a.click()
@@ -417,7 +417,7 @@ export default function DownloadPage() {
                     }}
                     className="mt-4 bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2 rounded-lg transition-colors"
                   >
-                    Download v1.0.1 (Fallback)
+                    Download v1.0.2 (Fallback)
                   </button>
                 </div>
               </div>

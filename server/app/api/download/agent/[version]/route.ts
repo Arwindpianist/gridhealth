@@ -9,8 +9,8 @@ export async function GET(
   try {
     const version = params.version
     
-    // Path to the specific agent release zip file
-    const zipPath = join(process.cwd(), '..', 'agent', 'release', `GridHealth-Agent-${version}.zip`)
+    // Path to the specific agent release zip file in public downloads
+    const zipPath = join(process.cwd(), 'public', 'downloads', 'agent', version, `GridHealth-Agent-${version}.zip`)
     
     // Check if the file exists
     if (!existsSync(zipPath)) {
