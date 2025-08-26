@@ -1,40 +1,5 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { randomUUID } from 'crypto'
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-// Calculate overall health score based on performance metrics
-function calculateHealthScore(performanceMetrics: any): number {
-  if (!performanceMetrics) return 100;
-  
-  let score = 100;
-  
-  // CPU usage penalty (0-100% usage)
-  if (performanceMetrics.cpu_usage_percent) {
-    const cpuUsage = Math.min(100, Math.max(0, performanceMetrics.cpu_usage_percent));
-    score -= (cpuUsage * 0.3); // CPU usage reduces score by up to 30 points
-  }
-  
-  // Memory usage penalty (0-100% usage)
-  if (performanceMetrics.memory_usage_percent) {
-    const memoryUsage = Math.min(100, Math.max(0, performanceMetrics.memory_usage_percent));
-    score -= (memoryUsage * 0.2); // Memory usage reduces score by up to 20 points
-  }
-  
-  // Process count penalty (if too many processes)
-  if (performanceMetrics.process_count) {
-    const processCount = performanceMetrics.process_count;
-    if (processCount > 500) score -= 10; // Penalty for high process count
-    if (processCount > 1000) score -= 20; // Higher penalty for very high process count
-  }
-  
-  // Ensure score stays within 0-100 range
-  return Math.max(0, Math.min(100, Math.round(score)));
-}
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '../../../lib/supabase'
 
 export async function GET() {
   return NextResponse.json({
@@ -45,181 +10,212 @@ export async function GET() {
   })
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    // Get the request body
     const body = await request.json()
     
-    // Validate required fields
-    if (!body.device_id || !body.license_key || !body.timestamp) {
-      return NextResponse.json(
-        { error: 'Missing required fields: device_id, license_key, timestamp' },
-        { status: 400 }
-      )
+    if (!body.device_id || !body.license_key) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Validate license key against licenses table
-    const { data: licenseData, error: licenseError } = await supabase
+    const { device_id, license_key, timestamp, type, status, system_info, network_health, health_score } = body
+
+    // Validate license
+    const { data: license, error: licenseError } = await supabaseAdmin
       .from('licenses')
-      .select('id, status, expires_at, device_limit')
-      .eq('license_key', body.license_key)
+      .select('*, organizations(id, name, subscription_status, device_limit)')
+      .eq('license_key', license_key)
+      .eq('status', 'active')
       .single()
 
-    if (licenseError || !licenseData) {
-      console.error('❌ License validation failed:', licenseError)
-      return NextResponse.json(
-        { error: 'Invalid or expired license key' },
-        { status: 401 }
-      )
+    if (licenseError || !license) {
+      return NextResponse.json({ error: 'Invalid or expired license' }, { status: 403 })
     }
 
-    if (licenseData.status !== 'active') {
-      console.error('❌ License is not active:', licenseData.status)
-      return NextResponse.json(
-        { error: 'License is not active' },
-        { status: 401 }
-      )
-    }
-
-    if (new Date(licenseData.expires_at) < new Date()) {
-      console.error('❌ License has expired:', licenseData.expires_at)
-      return NextResponse.json(
-        { error: 'License has expired' },
-        { status: 401 }
-      )
-    }
-
-    console.log('✅ License validated:', {
-      license_id: licenseData.id,
-      status: licenseData.status,
-      expires_at: licenseData.expires_at,
-      device_limit: licenseData.device_limit
-    })
-
-    console.log('📊 Received health data:', {
-      device_id: body.device_id,
-      license_key: body.license_key.substring(0, 20) + '...',
-      timestamp: body.timestamp,
-      data_size: JSON.stringify(body).length
-    })
-
-    // Generate a proper UUID for device_id if it's not already a UUID
-    let deviceId = body.device_id;
-    if (!deviceId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-      deviceId = randomUUID();
-      console.log('🔄 Generated UUID for device_id:', deviceId);
-    }
-
-    // Use upsert logic to either insert new device or update existing one
-    const deviceData = {
-      device_id: deviceId,
-      license_key: body.license_key,
-      device_name: body.system_info?.hostname || body.system_info?.machine_name || 'Unknown Device',
-      device_type: 'workstation',
-      os_name: body.system_info?.os_name || 'Unknown OS',
-      os_version: body.system_info?.os_version || 'Unknown Version',
-      hostname: body.system_info?.hostname || body.system_info?.machine_name || 'Unknown Hostname',
-      mac_address: body.network_health?.network_interfaces?.[0]?.mac_address || null,
-      ip_address: body.network_health?.network_interfaces?.[0]?.ip_addresses?.[0] || null,
-      is_active: true,
-      last_seen: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    // Use upsert to either insert new device or update existing one
-    const { error: deviceUpsertError } = await supabase
+    // Check device limit
+    const { data: existingDevices, error: deviceCountError } = await supabaseAdmin
       .from('devices')
-      .upsert([deviceData], {
-        onConflict: 'device_id',
-        ignoreDuplicates: false
-      });
+      .select('device_id')
+      .eq('license_key', license_key)
+
+    if (deviceCountError) {
+      console.error('Error counting devices:', deviceCountError)
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+    }
+
+    if (existingDevices && existingDevices.length >= license.organizations.device_limit) {
+      return NextResponse.json({ error: 'Device limit exceeded' }, { status: 403 })
+    }
+
+    // Prepare device data for upsert
+    const deviceData = {
+      device_id,
+      license_key,
+      device_name: system_info?.device_name || system_info?.hostname || 'Unknown Device',
+      hostname: system_info?.hostname || 'Unknown',
+      os_name: system_info?.os_name || 'Unknown',
+      os_version: system_info?.os_version || 'Unknown',
+      os_architecture: system_info?.os_architecture || 'Unknown',
+      device_type: system_info?.device_type || 'Unknown',
+      mac_address: network_health?.mac_address || 'Unknown',
+      ip_address: network_health?.ip_address || 'Unknown',
+      processor_count: system_info?.processor_count || 0,
+      processor_name: system_info?.processor_name || 'Unknown',
+      total_physical_memory: system_info?.total_physical_memory || 0,
+      domain: system_info?.domain || 'Unknown',
+      workgroup: system_info?.workgroup || 'Unknown',
+      last_boot_time: system_info?.last_boot_time || null,
+      timezone: system_info?.timezone || 'Unknown',
+      activation_date: new Date().toISOString(),
+      last_seen: timestamp || new Date().toISOString(),
+      is_active: true
+    }
+
+    // Upsert device information
+    const { error: deviceUpsertError } = await supabaseAdmin
+      .from('devices')
+      .upsert([deviceData], { onConflict: 'device_id', ignoreDuplicates: false })
 
     if (deviceUpsertError) {
-      console.error('❌ Failed to upsert device:', deviceUpsertError);
-      return NextResponse.json(
-        { error: 'Failed to register/update device' },
-        { status: 500 }
-      );
+      console.error('Error upserting device:', deviceUpsertError)
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
     }
 
-    console.log('✅ Device registered/updated successfully:', deviceId);
-
-    // If this is just a heartbeat (no full health data), return early
-    if (body.type === "heartbeat") {
-      console.log('💓 Heartbeat received from device:', deviceId);
-      
-      // Extract system information from heartbeat and update device details
-      await updateDeviceFromHeartbeat(deviceId, body);
-      
-      // Store heartbeat data with retention policy in health_metrics table
-      await storeHeartbeatWithRetention(deviceId, body);
-      
-      return NextResponse.json({
-        status: 'success',
-        message: 'Heartbeat received',
-        device_id: deviceId,
-        timestamp: new Date().toISOString(),
-        type: 'heartbeat'
-      });
+    // Handle different types of health data
+    if (type === "heartbeat") {
+      // Simple heartbeat - just update device status
+      await updateDeviceFromHeartbeat(device_id, body)
+      await storeHeartbeatWithRetention(device_id, body)
+    } else {
+      // Comprehensive health data - store all metrics
+      await storeComprehensiveHealthData(device_id, body)
     }
 
-    // Store health data in Supabase
-    const { data, error } = await supabase
-      .from('health_metrics')
-      .insert([
-        {
-          device_id: deviceId,
-          license_key: body.license_key,
-          timestamp: body.timestamp,
-          metric_type: 'system_health', // Add the missing metric_type field
-          value: calculateHealthScore(body.performance_metrics), // Calculate health score (0-100)
-          system_info: body.system_info || {},
-          performance_metrics: body.performance_metrics || {},
-          disk_health: body.disk_health || [],
-          memory_health: body.memory_health || {},
-          network_health: body.network_health || {},
-          service_health: body.service_health || [],
-          security_health: body.security_health || {},
-          agent_info: body.agent_info || {},
-          raw_data: body // Store complete raw data for debugging
-        }
-      ])
-      .select()
-
-    if (error) {
-      console.error('❌ Supabase insert error:', error)
-      return NextResponse.json(
-        { error: 'Failed to store health data', details: error.message },
-        { status: 500 }
-      )
-    }
-
-    console.log('✅ Health data stored successfully:', {
-      id: data[0]?.id,
-      device_id: body.device_id,
-      timestamp: body.timestamp
-    })
-
-    // Return success response
-    return NextResponse.json({
-      status: 'success',
-      message: 'Health data stored successfully',
-      timestamp: new Date().toISOString(),
-      data_id: data[0]?.id,
-      device_id: deviceId,
-      original_device_id: body.device_id
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Health data received successfully',
+      device_id,
+      organization: license.organizations.name
     })
 
   } catch (error) {
-    console.error('❌ Health data processing error:', error)
-    
-    return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    console.error('Error processing health data:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
+ * Store comprehensive health data with calculated health scores
+ */
+async function storeComprehensiveHealthData(deviceId: string, healthData: any) {
+  try {
+    const { health_score, performance_metrics, disk_health, memory_health, network_health, service_health, security_health, agent_info } = healthData
+
+    // Store overall health score
+    if (health_score) {
+      await supabaseAdmin.from('health_metrics').insert([{
+        device_id: deviceId,
+        metric_type: 'health_score',
+        value: health_score.overall,
+        raw_data: {
+          overall: health_score.overall,
+          performance: health_score.performance,
+          disk: health_score.disk,
+          memory: health_score.memory,
+          network: health_score.network,
+          services: health_score.services,
+          security: health_score.security,
+          calculated_at: health_score.calculated_at,
+          details: health_score.details
+        },
+        timestamp: new Date().toISOString()
+      }])
+    }
+
+    // Store performance metrics
+    if (performance_metrics) {
+      await supabaseAdmin.from('health_metrics').insert([{
+        device_id: deviceId,
+        metric_type: 'performance',
+        value: health_score?.performance || 100,
+        raw_data: performance_metrics,
+        timestamp: new Date().toISOString()
+      }])
+    }
+
+    // Store disk health
+    if (disk_health && Array.isArray(disk_health)) {
+      for (const disk of disk_health) {
+        await supabaseAdmin.from('health_metrics').insert([{
+          device_id: deviceId,
+          metric_type: 'disk_health',
+          value: health_score?.disk || 100,
+          raw_data: disk,
+          timestamp: new Date().toISOString()
+        }])
+      }
+    }
+
+    // Store memory health
+    if (memory_health) {
+      await supabaseAdmin.from('health_metrics').insert([{
+        device_id: deviceId,
+        metric_type: 'memory_health',
+        value: health_score?.memory || 100,
+        raw_data: memory_health,
+        timestamp: new Date().toISOString()
+      }])
+    }
+
+    // Store network health
+    if (network_health) {
+      await supabaseAdmin.from('health_metrics').insert([{
+        device_id: deviceId,
+        metric_type: 'network_health',
+        value: health_score?.network || 100,
+        raw_data: network_health,
+        timestamp: new Date().toISOString()
+      }])
+    }
+
+    // Store service health
+    if (service_health && Array.isArray(service_health)) {
+      for (const service of service_health) {
+        await supabaseAdmin.from('health_metrics').insert([{
+          device_id: deviceId,
+          metric_type: 'service_health',
+          value: health_score?.services || 100,
+          raw_data: service,
+          timestamp: new Date().toISOString()
+        }])
+      }
+    }
+
+    // Store security health
+    if (security_health) {
+      await supabaseAdmin.from('health_metrics').insert([{
+        device_id: deviceId,
+        metric_type: 'security_health',
+        value: health_score?.security || 100,
+        raw_data: security_health,
+        timestamp: new Date().toISOString()
+      }])
+    }
+
+    // Store agent info
+    if (agent_info) {
+      await supabaseAdmin.from('health_metrics').insert([{
+        device_id: deviceId,
+        metric_type: 'agent_info',
+        value: 100, // Agent info is always good
+        raw_data: agent_info,
+        timestamp: new Date().toISOString()
+      }])
+    }
+
+    console.log(`✅ Comprehensive health data stored for device ${deviceId}`)
+  } catch (error) {
+    console.error('Error storing comprehensive health data:', error)
   }
 }
 
@@ -230,7 +226,7 @@ async function storeHeartbeatWithRetention(deviceId: string, heartbeatData: any)
     const maxHeartbeatsPerDevice = parseInt(process.env.HEARTBEAT_RETENTION_LIMIT || '5');
     
     // Insert new heartbeat as a health metric with type 'heartbeat'
-    const { error: insertError } = await supabase
+    const { error: insertError } = await supabaseAdmin
       .from('health_metrics')
       .insert([
         {
@@ -258,7 +254,7 @@ async function storeHeartbeatWithRetention(deviceId: string, heartbeatData: any)
     }
 
     // Get count of heartbeat records for this device
-    const { data: heartbeatCount, error: countError } = await supabase
+    const { data: heartbeatCount, error: countError } = await supabaseAdmin
       .from('health_metrics')
       .select('id', { count: 'exact' })
       .eq('device_id', deviceId)
@@ -276,7 +272,7 @@ async function storeHeartbeatWithRetention(deviceId: string, heartbeatData: any)
       const heartbeatsToDelete = currentCount - maxHeartbeatsPerDevice;
       
       // Get the oldest heartbeat records to delete
-      const { data: oldHeartbeats, error: selectError } = await supabase
+      const { data: oldHeartbeats, error: selectError } = await supabaseAdmin
         .from('health_metrics')
         .select('id')
         .eq('device_id', deviceId)
@@ -292,7 +288,7 @@ async function storeHeartbeatWithRetention(deviceId: string, heartbeatData: any)
       if (oldHeartbeats && oldHeartbeats.length > 0) {
         const idsToDelete = oldHeartbeats.map(h => h.id);
         
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await supabaseAdmin
           .from('health_metrics')
           .delete()
           .in('id', idsToDelete);
@@ -359,7 +355,7 @@ async function updateDeviceFromHeartbeat(deviceId: string, heartbeatData: any) {
     });
 
     // Update device information using upsert
-    const { error: deviceUpsertError } = await supabase
+    const { error: deviceUpsertError } = await supabaseAdmin
       .from('devices')
       .upsert([deviceUpdateData], {
         onConflict: 'device_id',

@@ -36,6 +36,9 @@ public class HealthData
 
     [JsonPropertyName("agent_info")]
     public AgentInfo AgentInfo { get; set; } = new();
+
+    [JsonPropertyName("health_score")]
+    public HealthScore? HealthScore { get; set; }
 }
 
 public class SystemInfo
@@ -294,4 +297,58 @@ public class AgentInfo
 
     [JsonPropertyName("error_count")]
     public int ErrorCount { get; set; }
+}
+
+/// <summary>
+/// Comprehensive health score with component breakdowns
+/// </summary>
+public class HealthScore
+{
+    [JsonPropertyName("overall")]
+    public int Overall { get; set; }
+
+    [JsonPropertyName("performance")]
+    public int Performance { get; set; }
+
+    [JsonPropertyName("disk")]
+    public int Disk { get; set; }
+
+    [JsonPropertyName("memory")]
+    public int Memory { get; set; }
+
+    [JsonPropertyName("network")]
+    public int Network { get; set; }
+
+    [JsonPropertyName("services")]
+    public int Services { get; set; }
+
+    [JsonPropertyName("security")]
+    public int Security { get; set; }
+
+    [JsonPropertyName("calculated_at")]
+    public DateTime CalculatedAt { get; set; }
+
+    [JsonPropertyName("details")]
+    public HealthScoreDetails Details { get; set; } = new();
+}
+
+public class HealthScoreDetails
+{
+    [JsonPropertyName("performance_details")]
+    public object PerformanceDetails { get; set; } = new();
+
+    [JsonPropertyName("disk_details")]
+    public object DiskDetails { get; set; } = new();
+
+    [JsonPropertyName("memory_details")]
+    public object MemoryDetails { get; set; } = new();
+
+    [JsonPropertyName("network_details")]
+    public object NetworkDetails { get; set; } = new();
+
+    [JsonPropertyName("service_details")]
+    public object ServiceDetails { get; set; } = new();
+
+    [JsonPropertyName("security_details")]
+    public object SecurityDetails { get; set; } = new();
 } 

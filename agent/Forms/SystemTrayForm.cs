@@ -12,6 +12,7 @@ using System.Management;
 using System.Collections.Generic; // Added for List
 using System.Net.NetworkInformation; // Added for network interface information
 using System.Net.Sockets; // Added for AddressFamily enum
+using Microsoft.Extensions.Logging; // Added for logging
 
 namespace GridHealth.Agent.Forms
 {
@@ -29,8 +30,22 @@ namespace GridHealth.Agent.Forms
         public SystemTrayForm()
         {
             InitializeComponent();
-            InitializeTrayIcon();
+            
+            // Initialize services
+            _healthCollector = new HealthCollectorService(new LoggerFactory().CreateLogger<HealthCollectorService>());
+            _apiClient = new ApiClientService(new LoggerFactory().CreateLogger<ApiClientService>());
+            
+            // Load configuration
             LoadConfiguration();
+            
+            // Initialize tray icon
+            InitializeTrayIcon();
+            
+            // Start monitoring if configured
+            if (_config?.IsConfigured == true)
+            {
+                StartMonitoring();
+            }
         }
 
         private void InitializeComponent()
@@ -464,27 +479,43 @@ namespace GridHealth.Agent.Forms
             {
                 if (!_isMonitoring) return;
 
-                // Collect health data
+                // Collect comprehensive health data including calculated health score
                 var healthData = await _healthCollector.CollectHealthDataAsync();
                 if (healthData != null)
                 {
+                    // Log health score information
+                    if (healthData.HealthScore != null)
+                    {
+                        Console.WriteLine($"✅ Health scan completed - Overall Score: {healthData.HealthScore.Overall}/100 " +
+                            $"(Performance: {healthData.HealthScore.Performance}, Disk: {healthData.HealthScore.Disk}, " +
+                            $"Memory: {healthData.HealthScore.Memory}, Network: {healthData.HealthScore.Network}, " +
+                            $"Services: {healthData.HealthScore.Services}, Security: {healthData.HealthScore.Security})");
+                    }
+
                     // Send to API
                     var result = await _apiClient.SendHealthDataAsync(healthData, _config.ApiEndpoint);
                     if (result)
                     {
-                        // Update status
+                        // Update status with health score
                         var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
                         if (statusItem != null)
                         {
-                            statusItem.Text = $"Status: Online - Last full scan: {DateTime.Now:HH:mm}";
+                            var healthScore = healthData.HealthScore?.Overall ?? 0;
+                            var healthStatus = healthScore >= 80 ? "🟢" : healthScore >= 60 ? "🟡" : "🔴";
+                            statusItem.Text = $"Status: Online - Health: {healthStatus} {healthScore}/100 - Last scan: {DateTime.Now:HH:mm}";
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                // Log error but don't show to user
-                Console.WriteLine($"Health scan error: {ex.Message}");
+                Console.WriteLine($"❌ Health scan error: {ex.Message}");
+                // Update status to show error
+                var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
+                if (statusItem != null)
+                {
+                    statusItem.Text = $"Status: Scan Error - {ex.Message}";
+                }
             }
         }
 

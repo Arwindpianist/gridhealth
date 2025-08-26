@@ -11,6 +11,7 @@ namespace GridHealth.Agent.Services;
 public class HealthCollectorService : IHealthCollectorService
 {
     private readonly ILogger<HealthCollectorService> _logger;
+    private readonly HealthCalculationService _healthCalculationService;
     private PerformanceCounter? _cpuCounter;
     private PerformanceCounter? _memoryCounter;
     private PerformanceCounter? _diskReadCounter;
@@ -19,6 +20,7 @@ public class HealthCollectorService : IHealthCollectorService
     public HealthCollectorService(ILogger<HealthCollectorService> logger)
     {
         _logger = logger;
+        _healthCalculationService = new HealthCalculationService();
         
         // TEMPORARILY DISABLE PERFORMANCE COUNTERS TO FIX GUI HANGING ISSUE
         _logger.LogInformation("Performance counters disabled for debugging - GUI should now work");
@@ -47,6 +49,29 @@ public class HealthCollectorService : IHealthCollectorService
                 ServiceHealth = await CollectServiceHealthAsync(),
                 SecurityHealth = await CollectSecurityHealthAsync(),
                 AgentInfo = await CollectAgentInfoAsync()
+            };
+
+            // Calculate health score after all data is collected
+            var calculatedScore = _healthCalculationService.CalculateOverallHealthScore(healthData);
+            healthData.HealthScore = new Models.HealthScore
+            {
+                Overall = calculatedScore.Overall,
+                Performance = calculatedScore.Performance,
+                Disk = calculatedScore.Disk,
+                Memory = calculatedScore.Memory,
+                Network = calculatedScore.Network,
+                Services = calculatedScore.Services,
+                Security = calculatedScore.Security,
+                CalculatedAt = calculatedScore.CalculatedAt,
+                Details = new Models.HealthScoreDetails
+                {
+                    PerformanceDetails = calculatedScore.Details.PerformanceDetails,
+                    DiskDetails = calculatedScore.Details.DiskDetails,
+                    MemoryDetails = calculatedScore.Details.MemoryDetails,
+                    NetworkDetails = calculatedScore.Details.NetworkDetails,
+                    ServiceDetails = calculatedScore.Details.ServiceDetails,
+                    SecurityDetails = calculatedScore.Details.SecurityDetails
+                }
             };
 
             _logger.LogInformation("Health data collection completed successfully");
