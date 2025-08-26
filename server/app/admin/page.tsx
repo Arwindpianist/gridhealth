@@ -141,6 +141,15 @@ export default async function AdminPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.1),transparent_50%)]"></div>
         
+        {/* Breadcrumb Navigation */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <nav className="flex items-center space-x-2 text-sm text-gray-400 mb-8">
+            <Link href="/admin" className="hover:text-white transition-colors">
+              👑 Admin Dashboard
+            </Link>
+          </nav>
+        </div>
+        
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
@@ -149,6 +158,22 @@ export default async function AdminPage() {
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
               System administration and comprehensive platform overview for GridHealth
             </p>
+            
+            {/* Admin Navigation Options */}
+            <div className="mt-8 flex justify-center space-x-4">
+              <Link 
+                href="/admin" 
+                className="bg-gridhealth-600 hover:bg-gridhealth-700 text-white px-6 py-3 rounded-lg transition-colors font-medium border-2 border-gridhealth-500"
+              >
+                👑 Admin View (Current)
+              </Link>
+              <Link 
+                href="/admin/organization-view" 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+              >
+                🏢 Organization View
+              </Link>
+            </div>
           </div>
 
           {/* System Statistics */}
@@ -173,6 +198,22 @@ export default async function AdminPage() {
               <div className="text-3xl font-bold text-purple-400 mb-2">{totalLicenses}</div>
               <div className="text-gray-400">Active Licenses</div>
             </div>
+          </div>
+
+          {/* Quick Access to Organization View */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center space-x-2 bg-blue-900 border border-blue-700 rounded-lg px-4 py-2">
+              <span className="text-blue-200">💡 Want to see what organization owners see?</span>
+              <Link 
+                href="/admin/organization-view" 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors"
+              >
+                View Organization Dashboard
+              </Link>
+            </div>
+            <p className="text-sm text-gray-400 mt-2">
+              Useful for understanding user experience, troubleshooting, and support
+            </p>
           </div>
 
           {/* Revenue Overview */}
