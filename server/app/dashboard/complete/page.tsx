@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseAdmin } from '../../../lib/supabase'
+import { calculateHealthScore, getOrganizationHealthSummary } from '../../../lib/healthMetrics'
+import { generateOrganizationReportCSV } from '../../../lib/reportGenerator'
 
 async function getDashboardData(userId: string) {
   try {
@@ -55,9 +57,15 @@ async function getDashboardData(userId: string) {
     const { data: healthMetrics } = await supabaseAdmin
       .from('health_metrics')
       .select('*')
-      .in('device_id', deviceIds)
+      .eq('device_id', deviceIds)
       .order('timestamp', { ascending: false })
-      .limit(20)
+      .limit(100)
+
+    // Get organization health summary if user has organizations
+    let organizationHealthSummary = null
+    if (organizations && organizations.length > 0) {
+      organizationHealthSummary = await getOrganizationHealthSummary(organizations[0].id)
+    }
 
     return {
       user,
@@ -67,6 +75,7 @@ async function getDashboardData(userId: string) {
       licenses: licenses || [],
       devices: devices || [],
       healthMetrics: healthMetrics || [],
+      organizationHealthSummary,
       isIndividual
     }
   } catch (error) {
@@ -88,7 +97,7 @@ export default async function CompleteDashboardPage() {
     redirect('/onboarding')
   }
 
-  const { user, organizations, companies, licenses, devices, healthMetrics, isIndividual } = dashboardData
+  const { user, organizations, companies, licenses, devices, healthMetrics, organizationHealthSummary, isIndividual } = dashboardData
   
   // Calculate stats
   const totalDevices = devices.length
@@ -214,106 +223,125 @@ export default async function CompleteDashboardPage() {
           </div>
         </div>
 
-        {/* Device Management Section */}
-        <div className="bg-dark-800 rounded-lg border border-dark-700 mb-8">
-          <div className="px-6 py-4 border-b border-dark-700">
-            <h2 className="text-xl font-semibold text-white">Device Management</h2>
-            <p className="text-dark-300">Monitor and manage your GridHealth agents</p>
-          </div>
-          <div className="p-6">
-            {devices.length === 0 ? (
-              <div className="text-center py-8">
-                <svg className="mx-auto h-12 w-12 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-dark-300">No devices yet</h3>
-                <p className="mt-1 text-sm text-dark-400">Get started by downloading and installing the GridHealth agent on your devices.</p>
-                <div className="mt-6">
-                  <Link 
-                    href="/download" 
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                  >
-                    Download Agent
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-dark-700">
-                  <thead className="bg-dark-700">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">Device</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">OS</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">Last Seen</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">Health Score</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-dark-800 divide-y divide-dark-700">
-                    {devices.map((device) => {
-                      const deviceHealth = healthMetrics.find(h => h.device_id === device.device_id)
-                      return (
-                        <tr key={device.device_id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm font-medium text-white">{device.device_name || device.hostname || 'Unknown Device'}</div>
-                              <div className="text-sm text-dark-400">{device.device_id}</div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-dark-300">{device.os_name || 'Unknown'}</div>
-                            <div className="text-sm text-dark-400">{device.os_version || ''}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {(() => {
-                              if (!device.last_seen) {
-                                return (
-                                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                                    Never Seen
-                                  </span>
-                                )
-                              }
-                              
-                              const lastSeen = new Date(device.last_seen)
-                              const now = new Date()
-                              const minutesSinceLastSeen = (now.getTime() - lastSeen.getTime()) / (1000 * 60)
-                              const isOnline = minutesSinceLastSeen <= 5
-                              
-                              return (
-                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                  isOnline 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {isOnline ? '🟢 Online' : '🔴 Offline'}
-                                </span>
-                              )
-                            })()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-dark-300">
-                            {device.last_seen ? new Date(device.last_seen).toLocaleDateString() : 'Never'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {deviceHealth ? (
-                              <div className="flex items-center">
-                                <div className={`w-3 h-3 rounded-full mr-2 ${
-                                  deviceHealth.value >= 80 ? 'bg-green-500' :
-                                  deviceHealth.value >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                                }`}></div>
-                                <span className="text-sm text-white">{deviceHealth.value}/100</span>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-dark-400">No data</span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+        {/* Devices List */}
+        <div className="bg-dark-800 rounded-lg border border-dark-700">
+          <div className="px-6 py-4 border-b border-dark-700 flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Devices</h2>
+              <p className="text-dark-300">Monitor your registered devices</p>
+            </div>
+            {organizations.length > 0 && (
+              <div className="flex space-x-3">
+                <a 
+                  href={`data:text/csv;charset=utf-8,${encodeURIComponent(await generateOrganizationReportCSV(organizations[0].id) || '')}`}
+                  download={`organization-report-${organizations[0].name}.csv`}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+                >
+                  📊 Download Organization Report
+                </a>
               </div>
             )}
           </div>
+          {devices.length === 0 ? (
+            <div className="p-6 text-center">
+              <p className="text-dark-300">No devices registered yet.</p>
+              <p className="text-dark-400 text-sm mt-1">Install the GridHealth agent on your devices to get started.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-dark-700">
+                <thead className="bg-dark-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Device
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      OS
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Last Seen
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Health Score
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-dark-800 divide-y divide-dark-700">
+                  {devices.map((device) => {
+                    const deviceHealth = healthMetrics.find(h => h.device_id === device.device_id)
+                    const healthScore = deviceHealth ? calculateHealthScore(deviceHealth) : null
+                    
+                    return (
+                      <tr key={device.device_id} className="hover:bg-dark-700 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Link 
+                            href={`/dashboard/device/${device.device_id}`}
+                            className="block hover:bg-dark-600 rounded p-2 -m-2 transition-colors"
+                          >
+                            <div>
+                              <div className="text-sm font-medium text-white hover:text-gridhealth-400 transition-colors">
+                                {device.device_name || device.hostname || 'Unknown Device'}
+                              </div>
+                              <div className="text-sm text-dark-400">{device.device_id}</div>
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-dark-300">{device.os_name || 'Unknown'}</div>
+                          <div className="text-sm text-dark-400">{device.os_version || ''}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {(() => {
+                            if (!device.last_seen) {
+                              return (
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                  Never Seen
+                                </span>
+                              )
+                            }
+                            
+                            const lastSeen = new Date(device.last_seen)
+                            const now = new Date()
+                            const minutesSinceLastSeen = (now.getTime() - lastSeen.getTime()) / (1000 * 60)
+                            const isOnline = minutesSinceLastSeen <= 5
+                            
+                            return (
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                isOnline 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {isOnline ? '🟢 Online' : '🔴 Offline'}
+                              </span>
+                            )
+                          })()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-dark-300">
+                          {device.last_seen ? new Date(device.last_seen).toLocaleDateString() : 'Never'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {healthScore ? (
+                            <div className="flex items-center">
+                              <div className={`w-3 h-3 rounded-full mr-2 ${
+                                healthScore.overall >= 80 ? 'bg-green-500' :
+                                healthScore.overall >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}></div>
+                              <span className="text-sm text-white">{healthScore.overall}/100</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-dark-400">No data</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Recent Health Data */}

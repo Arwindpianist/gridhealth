@@ -21,6 +21,47 @@ async function getAdminData() {
       supabaseAdmin.from('licenses').select('*', { count: 'exact', head: true })
     ])
 
+    // Get device status breakdown
+    const { data: allDevices } = await supabaseAdmin
+      .from('devices')
+      .select('last_seen, is_active')
+
+    let onlineDevices = 0
+    let offlineDevices = 0
+    let activeDevices = 0
+
+    if (allDevices) {
+      const now = new Date()
+      allDevices.forEach(device => {
+        if (device.is_active) activeDevices++
+        
+        if (device.last_seen) {
+          const lastSeen = new Date(device.last_seen)
+          const minutesSinceLastSeen = (now.getTime() - lastSeen.getTime()) / (1000 * 60)
+          if (minutesSinceLastSeen <= 5) {
+            onlineDevices++
+          } else {
+            offlineDevices++
+          }
+        } else {
+          offlineDevices++
+        }
+      })
+    }
+
+    // Get health metrics summary
+    const { data: recentHealthMetrics } = await supabaseAdmin
+      .from('health_metrics')
+      .select('*')
+      .neq('metric_type', 'heartbeat')
+      .gte('timestamp', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
+
+    let averageHealthScore = 0
+    if (recentHealthMetrics && recentHealthMetrics.length > 0) {
+      const totalScore = recentHealthMetrics.reduce((sum, metric) => sum + (metric.value || 0), 0)
+      averageHealthScore = Math.round(totalScore / recentHealthMetrics.length)
+    }
+
     // Fetch all organizations with their details
     const { data: organizations } = await supabaseAdmin
       .from('organizations')
@@ -72,6 +113,10 @@ async function getAdminData() {
       totalCompanies: totalCompanies || 0,
       totalDevices: totalDevices || 0,
       totalLicenses: totalLicenses || 0,
+      onlineDevices,
+      offlineDevices,
+      activeDevices,
+      averageHealthScore,
       organizations: organizations || [],
       companies: companies || [],
       totalDeviceLimit,
@@ -126,6 +171,10 @@ export default async function AdminPage() {
     totalCompanies, 
     totalDevices, 
     totalLicenses,
+    onlineDevices,
+    offlineDevices,
+    activeDevices,
+    averageHealthScore,
     organizations,
     companies,
     totalDeviceLimit,
@@ -192,11 +241,38 @@ export default async function AdminPage() {
             </div>
             <div className="card text-center">
               <div className="text-3xl font-bold text-yellow-400 mb-2">{totalDevices}</div>
-              <div className="text-gray-400">Active Devices</div>
+              <div className="text-gray-400">Total Devices</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {onlineDevices} online, {offlineDevices} offline
+              </div>
             </div>
             <div className="card text-center">
               <div className="text-3xl font-bold text-purple-400 mb-2">{totalLicenses}</div>
               <div className="text-gray-400">Active Licenses</div>
+            </div>
+          </div>
+
+          {/* Device Status Overview */}
+          <div className="grid md:grid-cols-4 gap-6 mb-12">
+            <div className="card text-center">
+              <div className="text-3xl font-bold text-green-400 mb-2">{onlineDevices}</div>
+              <div className="text-gray-400">Online Devices</div>
+              <div className="text-xs text-green-400 mt-1">🟢 Active</div>
+            </div>
+            <div className="card text-center">
+              <div className="text-3xl font-bold text-red-400 mb-2">{offlineDevices}</div>
+              <div className="text-gray-400">Offline Devices</div>
+              <div className="text-xs text-red-400 mt-1">🔴 Inactive</div>
+            </div>
+            <div className="card text-center">
+              <div className="text-3xl font-bold text-blue-400 mb-2">{activeDevices}</div>
+              <div className="text-gray-400">Active Devices</div>
+              <div className="text-xs text-blue-400 mt-1">✅ Enabled</div>
+            </div>
+            <div className="card text-center">
+              <div className="text-3xl font-bold text-purple-400 mb-2">{averageHealthScore}</div>
+              <div className="text-gray-400">Avg Health Score</div>
+              <div className="text-xs text-purple-400 mt-1">📊 24h Average</div>
             </div>
           </div>
 
