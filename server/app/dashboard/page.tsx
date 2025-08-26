@@ -84,10 +84,11 @@ export default async function DashboardPage() {
   if (userRole) {
     console.log('✅ User has role:', userRole.role)
 
-    // If admin, redirect to admin dashboard
+    // If admin, allow access to both dashboard and admin pages
     if (userRole.role === 'admin') {
-      console.log('👑 Admin user, redirecting to admin dashboard')
-      redirect('/admin')
+      console.log('👑 Admin user - can access both dashboard and admin pages')
+      // Don't redirect, allow admin to choose
+      redirectPath = null
     }
 
     // For individual users, they can access the dashboard immediately
@@ -98,21 +99,25 @@ export default async function DashboardPage() {
 
     // For organization/company/owner users, check if they have licenses
     if (userRole.role === 'organization' || userRole.role === 'company' || userRole.role === 'owner') {
-      const organizationId = userRole.organization_id || userRole.company_id
-      if (organizationId) {
-        const { data: userLicenses } = await supabaseAdmin
-          .from('licenses')
-          .select('id')
-          .eq('organization_id', organizationId)
-          .limit(1)
+      console.log('🏢 Organization/Company user, checking licenses...')
+      
+      // Check if user has any active licenses
+      const { data: licenses, error: licenseError } = await supabaseAdmin
+        .from('licenses')
+        .select('*')
+        .eq('status', 'active')
+        .or(`organization_id.eq.${userRole.organization_id},company_id.eq.${userRole.company_id}`)
 
-        if (userLicenses && userLicenses.length > 0) {
-          console.log('✅ Organization has licenses, redirecting to complete dashboard')
-          redirect('/dashboard/complete')
-        } else {
-          console.log('❌ Organization has no licenses, staying on dashboard for license purchase')
-          // Don't redirect, let them stay on dashboard to purchase licenses
-        }
+      if (licenseError) {
+        console.error('❌ Error checking licenses:', licenseError)
+        // Don't redirect to onboarding for database errors
+        console.log('⚠️ Database error, but continuing with basic dashboard access')
+      } else if (licenses && licenses.length > 0) {
+        console.log('✅ User has active licenses, redirecting to complete dashboard')
+        redirect('/dashboard/complete')
+      } else {
+        console.log('⚠️ No active licenses found, redirecting to onboarding')
+        redirect('/onboarding')
       }
     }
   } else {
@@ -137,6 +142,45 @@ export default async function DashboardPage() {
   // If we get here, user has basic profile info but may not have completed full onboarding
   // Allow them to stay on the dashboard to purchase licenses
   console.log('✅ User can access dashboard for license purchase')
+
+  // If we reach here, admin users can choose their path
+  if (userRole?.role === 'admin') {
+    return (
+      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
+        <div className="max-w-md w-full bg-dark-800 rounded-lg border border-dark-700 p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-white mb-2">Welcome, Admin!</h1>
+            <p className="text-dark-300">Choose where you'd like to go:</p>
+          </div>
+          
+          <div className="space-y-4">
+            <a 
+              href="/admin" 
+              className="w-full bg-gridhealth-600 hover:bg-gridhealth-700 text-white px-6 py-3 rounded-lg transition-colors block text-center font-medium"
+            >
+              👑 Admin Dashboard
+            </a>
+            
+            <a 
+              href="/dashboard/complete" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors block text-center font-medium"
+            >
+              🏢 Organization Dashboard
+            </a>
+            
+            <p className="text-sm text-dark-400 text-center mt-4">
+              You can access both views from the navigation menu
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // For other users, continue with normal flow
+  if (redirectPath) {
+    redirect(redirectPath)
+  }
 
   // Return the dashboard content for new users
   return (

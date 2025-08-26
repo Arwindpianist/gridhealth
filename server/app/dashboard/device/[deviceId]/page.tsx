@@ -91,6 +91,13 @@ export default async function DevicePage({ params }: DevicePageProps) {
               >
                 Back to Dashboard
               </Link>
+              {/* Show admin link if user is admin */}
+              <Link 
+                href="/admin" 
+                className="bg-gridhealth-600 hover:bg-gridhealth-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                👑 Admin Panel
+              </Link>
               {csvReport && (
                 <a 
                   href={`data:text/csv;charset=utf-8,${encodeURIComponent(csvReport)}`}

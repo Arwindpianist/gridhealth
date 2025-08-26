@@ -97,7 +97,7 @@ export default async function CompleteDashboardPage() {
     redirect('/onboarding')
   }
 
-  const { user, organizations, companies, licenses, devices, healthMetrics, organizationHealthSummary, isIndividual } = dashboardData
+  const { user, roles, organizations, companies, licenses, devices, healthMetrics, organizationHealthSummary, isIndividual } = dashboardData
   
   // Calculate stats
   const totalDevices = devices.length
@@ -157,6 +157,15 @@ export default async function CompleteDashboardPage() {
               >
                 Download Agent
               </Link>
+              {/* Show admin link if user is admin */}
+              {roles.some(r => r.role === 'admin') && (
+                <Link 
+                  href="/admin" 
+                  className="bg-gridhealth-600 hover:bg-gridhealth-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  👑 Admin Panel
+                </Link>
+              )}
             </div>
           </div>
         </div>

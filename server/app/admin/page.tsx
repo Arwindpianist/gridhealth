@@ -209,18 +209,18 @@ export default async function AdminPage() {
             </p>
             
             {/* Admin Navigation Options */}
-            <div className="mt-8 flex justify-center space-x-4">
+            <div className="flex space-x-4">
               <Link 
-                href="/admin" 
-                className="bg-gridhealth-600 hover:bg-gridhealth-700 text-white px-6 py-3 rounded-lg transition-colors font-medium border-2 border-gridhealth-500"
+                href="/dashboard" 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
-                👑 Admin View (Current)
+                🏢 Organization Dashboard
               </Link>
               <Link 
                 href="/admin/organization-view" 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
-                🏢 Organization View
+                👁️ Preview Organization View
               </Link>
             </div>
           </div>
