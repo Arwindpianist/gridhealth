@@ -236,13 +236,13 @@ export async function getDeviceHealthData(deviceId: string): Promise<DeviceHealt
     if (latestHealthScan) {
       // Use the comprehensive health scan data directly
       healthScore = {
-        overall: latestHealthScan.value || 100,
+        overall: Math.round(latestHealthScan.value || 100),
         performance: latestHealthScan.performance_metrics?.cpu_usage_percent ? 
-          Math.max(0, 100 - (latestHealthScan.performance_metrics.cpu_usage_percent + latestHealthScan.performance_metrics.memory_usage_percent) / 2) : 100,
+          Math.round(Math.max(0, 100 - (latestHealthScan.performance_metrics.cpu_usage_percent + latestHealthScan.performance_metrics.memory_usage_percent) / 2)) : 100,
         disk: latestHealthScan.disk_health?.[0]?.free_space_percent ? 
-          Math.max(0, Math.min(100, latestHealthScan.disk_health[0].free_space_percent)) : 100,
+          Math.round(Math.max(0, Math.min(100, latestHealthScan.disk_health[0].free_space_percent))) : 100,
         memory: latestHealthScan.memory_health?.memory_usage_percent ? 
-          Math.max(0, 100 - latestHealthScan.memory_health.memory_usage_percent) : 100,
+          Math.round(Math.max(0, 100 - latestHealthScan.memory_health.memory_usage_percent)) : 100,
         network: latestHealthScan.network_health?.internet_connectivity ? 100 : 80,
         services: latestHealthScan.service_health?.filter((s: any) => s.status === 'Running').length === latestHealthScan.service_health?.length ? 100 : 80,
         security: latestHealthScan.security_health?.uac_enabled ? 100 : 80,
