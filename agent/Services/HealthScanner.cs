@@ -11,12 +11,14 @@ public class HealthScanner : IHealthScanner
 {
     private readonly ILogger<HealthScanner> _logger;
     private readonly IConfigurationManager _configManager;
+    private readonly HealthCalculationService _healthCalculationService;
     private TimeSpan _lastScanDuration = TimeSpan.Zero;
 
     public HealthScanner(ILogger<HealthScanner> logger, IConfigurationManager configManager)
     {
         _logger = logger;
         _configManager = configManager;
+        _healthCalculationService = new HealthCalculationService();
     }
 
     public async Task<HealthData> ScanAsync()
@@ -36,6 +38,7 @@ public class HealthScanner : IHealthScanner
                 DeviceId = deviceId,
                 LicenseKey = licenseKey,
                 Timestamp = DateTime.UtcNow,
+                Type = "health_scan",
                 SystemInfo = await GetSystemInfoAsync(),
                 PerformanceMetrics = await GetPerformanceMetricsAsync(),
                 DiskHealth = await GetDiskHealthAsync(),
@@ -52,6 +55,29 @@ public class HealthScanner : IHealthScanner
                     ScanFrequencyMinutes = 1440,
                     TotalScansPerformed = 0,
                     LastSuccessfulScan = DateTime.UtcNow
+                }
+            };
+
+            // Calculate health score after all data is collected
+            var calculatedScore = _healthCalculationService.CalculateOverallHealthScore(healthData);
+            healthData.HealthScore = new Models.HealthScore
+            {
+                Overall = calculatedScore.Overall,
+                Performance = calculatedScore.Performance,
+                Disk = calculatedScore.Disk,
+                Memory = calculatedScore.Memory,
+                Network = calculatedScore.Network,
+                Services = calculatedScore.Services,
+                Security = calculatedScore.Security,
+                CalculatedAt = calculatedScore.CalculatedAt,
+                Details = new Models.HealthScoreDetails
+                {
+                    PerformanceDetails = calculatedScore.Details.PerformanceDetails,
+                    DiskDetails = calculatedScore.Details.DiskDetails,
+                    MemoryDetails = calculatedScore.Details.MemoryDetails,
+                    NetworkDetails = calculatedScore.Details.NetworkDetails,
+                    ServiceDetails = calculatedScore.Details.ServiceDetails,
+                    SecurityDetails = calculatedScore.Details.SecurityDetails
                 }
             };
 

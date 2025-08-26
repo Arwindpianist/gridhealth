@@ -91,7 +91,19 @@ namespace GridHealth.Agent
         {
             try
             {
+                // Set up file logging for console output
+                var outputLogFile = Path.Combine(Application.StartupPath, "output.log");
+                var fileStream = new FileStream(outputLogFile, FileMode.Create, FileAccess.Write, FileShare.Read);
+                var streamWriter = new StreamWriter(fileStream) { AutoFlush = true };
+                
+                // Redirect console output to file
+                var originalOut = Console.Out;
+                var originalError = Console.Error;
+                Console.SetOut(streamWriter);
+                Console.SetError(streamWriter);
+                
                 Console.WriteLine("🚀 Starting GridHealth Agent as System Tray application...");
+                Console.WriteLine($"📁 Log file: {outputLogFile}");
                 
                 // Set up Windows Forms application
                 Application.EnableVisualStyles();
@@ -107,10 +119,33 @@ namespace GridHealth.Agent
                 Application.Run(systemTrayForm);
                 
                 Console.WriteLine("✅ Application completed successfully");
+                
+                // Restore original console output
+                streamWriter.Close();
+                fileStream.Close();
+                Console.SetOut(originalOut);
+                Console.SetError(originalError);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error running as system tray: {ex.Message}");
+                Console.WriteLine($"Exception details: {ex}");
+                
+                try
+                {
+                    // Restore original console output before showing message box
+                    var originalOut = Console.Out;
+                    var originalError = Console.Error;
+                    Console.SetOut(originalOut);
+                    Console.SetError(originalError);
+                    
+                    MessageBox.Show($"Error: {ex.Message}", "GridHealth Agent Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                catch
+                {
+                    // If even the error message box fails, just exit
+                }
                 throw;
             }
         }

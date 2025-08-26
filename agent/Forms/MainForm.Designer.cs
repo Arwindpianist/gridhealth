@@ -32,7 +32,7 @@ namespace GridHealth.Agent.Forms
             
             // Form settings
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 600);
+            this.ClientSize = new System.Drawing.Size(800, 650); // Increased height from 600 to 650
             this.Text = "GridHealth Agent";
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -259,7 +259,7 @@ namespace GridHealth.Agent.Forms
 
             this.btnViewLogs = new Button();
             this.btnViewLogs.Text = "View Logs";
-            this.btnViewLogs.Location = new Point(530, 10);
+            this.btnViewLogs.Location = new Point(520, 10); // Adjusted for better spacing
             this.btnViewLogs.Size = new Size(120, 40);
             this.btnViewLogs.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             this.btnViewLogs.BackColor = Color.FromArgb(107, 114, 128); // Gray-500
@@ -272,7 +272,7 @@ namespace GridHealth.Agent.Forms
 
             this.btnSettings = new Button();
             this.btnSettings.Text = "Settings";
-            this.btnSettings.Location = new Point(670, 10);
+            this.btnSettings.Location = new Point(660, 10); // Adjusted for better spacing
             this.btnSettings.Size = new Size(120, 40);
             this.btnSettings.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             this.btnSettings.BackColor = Color.FromArgb(107, 114, 128); // Gray-500

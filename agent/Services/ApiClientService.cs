@@ -16,8 +16,8 @@ public class ApiClientService : IApiClientService
 
     public async Task<bool> SendHealthDataAsync(HealthData healthData, string apiEndpoint)
     {
-        _logger.LogInformation("Sending health data to API");
-        Console.WriteLine("📡 Sending health data to API...");
+        _logger.LogInformation("Sending comprehensive health scan data to API");
+        Console.WriteLine("📡 Sending comprehensive health scan data to API...");
         
         try
         {
@@ -28,11 +28,48 @@ public class ApiClientService : IApiClientService
             client.DefaultRequestHeaders.Add("User-Agent", "GridHealth-Agent/1.0");
             client.DefaultRequestHeaders.Add("X-License-Key", healthData.LicenseKey);
             
-            // Serialize health data
-            var json = System.Text.Json.JsonSerializer.Serialize(healthData, new System.Text.Json.JsonSerializerOptions
+            // Restructure data to match database schema exactly
+            var comprehensiveData = new
             {
-                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                device_id = healthData.DeviceId,
+                metric_type = "health_scan",
+                value = healthData.HealthScore?.Overall ?? 0.0,
+                unit = "score",
+                timestamp = healthData.Timestamp,
+                license_key = healthData.LicenseKey,
+                system_info = healthData.SystemInfo,
+                performance_metrics = healthData.PerformanceMetrics,
+                disk_health = healthData.DiskHealth,
+                memory_health = healthData.MemoryHealth,
+                network_health = healthData.NetworkHealth,
+                service_health = healthData.ServiceHealth,
+                security_health = healthData.SecurityHealth,
+                agent_info = healthData.AgentInfo,
+                raw_data = new
+                {
+                    type = "health_scan",
+                    health_score = healthData.HealthScore,
+                    performance_metrics = healthData.PerformanceMetrics,
+                    disk_health = healthData.DiskHealth,
+                    memory_health = healthData.MemoryHealth,
+                    network_health = healthData.NetworkHealth,
+                    service_health = healthData.ServiceHealth,
+                    security_health = healthData.SecurityHealth,
+                    agent_info = healthData.AgentInfo,
+                    system_info = healthData.SystemInfo
+                }
+            };
+            
+            // Serialize comprehensive health data
+            var json = System.Text.Json.JsonSerializer.Serialize(comprehensiveData, new System.Text.Json.JsonSerializerOptions
+            {
+                // Remove CamelCase naming policy to keep exact field names the API expects
+                // PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
             });
+            
+            // Debug: Log the exact JSON being sent
+            Console.WriteLine($"🔍 JSON being sent to API:");
+            Console.WriteLine(json);
             
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             
@@ -41,8 +78,8 @@ public class ApiClientService : IApiClientService
             
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Health data sent successfully");
-                Console.WriteLine($"✅ Health data sent successfully! Status: {response.StatusCode}");
+                _logger.LogInformation("Comprehensive health scan data sent successfully");
+                Console.WriteLine($"✅ Comprehensive health scan data sent successfully! Status: {response.StatusCode}");
                 return true;
             }
             else

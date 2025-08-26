@@ -111,12 +111,42 @@ async function storeComprehensiveHealthData(deviceId: string, healthData: any) {
   try {
     const { health_score, performance_metrics, disk_health, memory_health, network_health, service_health, security_health, agent_info } = healthData
 
-    // Store overall health score
+    // Store main health scan record with ALL columns
+    await supabaseAdmin.from('health_metrics').insert([{
+      device_id: deviceId,
+      metric_type: 'health_scan',
+      value: health_score?.overall || 0,
+      unit: 'score',
+      timestamp: new Date().toISOString(),
+      license_key: healthData.license_key,
+      system_info: healthData.system_info,
+      performance_metrics: performance_metrics,
+      disk_health: disk_health,
+      memory_health: memory_health,
+      network_health: network_health,
+      service_health: service_health,
+      security_health: security_health,
+      agent_info: agent_info,
+      raw_data: healthData
+    }])
+
+    // Store overall health score with ALL columns
     if (health_score) {
       await supabaseAdmin.from('health_metrics').insert([{
         device_id: deviceId,
         metric_type: 'health_score',
         value: health_score.overall,
+        unit: 'score',
+        timestamp: new Date().toISOString(),
+        license_key: healthData.license_key,
+        system_info: healthData.system_info,
+        performance_metrics: performance_metrics,
+        disk_health: disk_health,
+        memory_health: memory_health,
+        network_health: network_health,
+        service_health: service_health,
+        security_health: security_health,
+        agent_info: agent_info,
         raw_data: {
           overall: health_score.overall,
           performance: health_score.performance,
@@ -127,89 +157,158 @@ async function storeComprehensiveHealthData(deviceId: string, healthData: any) {
           security: health_score.security,
           calculated_at: health_score.calculated_at,
           details: health_score.details
-        },
-        timestamp: new Date().toISOString()
+        }
       }])
     }
 
-    // Store performance metrics
+    // Store performance metrics with ALL columns
     if (performance_metrics) {
       await supabaseAdmin.from('health_metrics').insert([{
         device_id: deviceId,
         metric_type: 'performance',
         value: health_score?.performance || 100,
-        raw_data: performance_metrics,
-        timestamp: new Date().toISOString()
+        unit: 'score',
+        timestamp: new Date().toISOString(),
+        license_key: healthData.license_key,
+        system_info: healthData.system_info,
+        performance_metrics: performance_metrics,
+        disk_health: disk_health,
+        memory_health: memory_health,
+        network_health: network_health,
+        service_health: service_health,
+        security_health: security_health,
+        agent_info: agent_info,
+        raw_data: performance_metrics
       }])
     }
 
-    // Store disk health
+    // Store disk health with ALL columns
     if (disk_health && Array.isArray(disk_health)) {
       for (const disk of disk_health) {
         await supabaseAdmin.from('health_metrics').insert([{
           device_id: deviceId,
           metric_type: 'disk_health',
           value: health_score?.disk || 100,
-          raw_data: disk,
-          timestamp: new Date().toISOString()
+          unit: 'score',
+          timestamp: new Date().toISOString(),
+          license_key: healthData.license_key,
+          system_info: healthData.system_info,
+          performance_metrics: performance_metrics,
+          disk_health: disk_health,
+          memory_health: memory_health,
+          network_health: network_health,
+          service_health: service_health,
+          security_health: security_health,
+          agent_info: agent_info,
+          raw_data: disk
         }])
       }
     }
 
-    // Store memory health
+    // Store memory health with ALL columns
     if (memory_health) {
       await supabaseAdmin.from('health_metrics').insert([{
         device_id: deviceId,
         metric_type: 'memory_health',
         value: health_score?.memory || 100,
-        raw_data: memory_health,
-        timestamp: new Date().toISOString()
+        unit: 'score',
+        timestamp: new Date().toISOString(),
+        license_key: healthData.license_key,
+        system_info: healthData.system_info,
+        performance_metrics: performance_metrics,
+        disk_health: disk_health,
+        memory_health: memory_health,
+        network_health: network_health,
+        service_health: service_health,
+        security_health: security_health,
+        agent_info: agent_info,
+        raw_data: memory_health
       }])
     }
 
-    // Store network health
+    // Store network health with ALL columns
     if (network_health) {
       await supabaseAdmin.from('health_metrics').insert([{
         device_id: deviceId,
         metric_type: 'network_health',
         value: health_score?.network || 100,
-        raw_data: network_health,
-        timestamp: new Date().toISOString()
+        unit: 'score',
+        timestamp: new Date().toISOString(),
+        license_key: healthData.license_key,
+        system_info: healthData.system_info,
+        performance_metrics: performance_metrics,
+        disk_health: disk_health,
+        memory_health: memory_health,
+        network_health: network_health,
+        service_health: service_health,
+        security_health: security_health,
+        agent_info: agent_info,
+        raw_data: network_health
       }])
     }
 
-    // Store service health
+    // Store service health with ALL columns
     if (service_health && Array.isArray(service_health)) {
       for (const service of service_health) {
         await supabaseAdmin.from('health_metrics').insert([{
           device_id: deviceId,
           metric_type: 'service_health',
           value: health_score?.services || 100,
-          raw_data: service,
-          timestamp: new Date().toISOString()
+          unit: 'score',
+          timestamp: new Date().toISOString(),
+          license_key: healthData.license_key,
+          system_info: healthData.system_info,
+          performance_metrics: performance_metrics,
+          disk_health: disk_health,
+          memory_health: memory_health,
+          network_health: network_health,
+          service_health: service_health,
+          security_health: security_health,
+          agent_info: agent_info,
+          raw_data: service
         }])
       }
     }
 
-    // Store security health
+    // Store security health with ALL columns
     if (security_health) {
       await supabaseAdmin.from('health_metrics').insert([{
         device_id: deviceId,
         metric_type: 'security_health',
         value: health_score?.security || 100,
-        raw_data: security_health,
-        timestamp: new Date().toISOString()
+        unit: 'score',
+        timestamp: new Date().toISOString(),
+        license_key: healthData.license_key,
+        system_info: healthData.system_info,
+        performance_metrics: performance_metrics,
+        disk_health: disk_health,
+        memory_health: memory_health,
+        network_health: network_health,
+        service_health: service_health,
+        security_health: security_health,
+        agent_info: agent_info,
+        raw_data: security_health
       }])
     }
 
-    // Store agent info
+    // Store agent info with ALL columns
     if (agent_info) {
       await supabaseAdmin.from('health_metrics').insert([{
         device_id: deviceId,
         metric_type: 'agent_info',
         value: 100, // Agent info is always good
-        raw_data: agent_info,
-        timestamp: new Date().toISOString()
+        unit: 'score',
+        timestamp: new Date().toISOString(),
+        license_key: healthData.license_key,
+        system_info: healthData.system_info,
+        performance_metrics: performance_metrics,
+        disk_health: disk_health,
+        memory_health: memory_health,
+        network_health: network_health,
+        service_health: service_health,
+        security_health: security_health,
+        agent_info: agent_info,
+        raw_data: agent_info
       }])
     }
 

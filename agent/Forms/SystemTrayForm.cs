@@ -22,9 +22,11 @@ namespace GridHealth.Agent.Forms
         private ContextMenuStrip trayMenu;
         private System.Windows.Forms.Timer monitoringTimer; // For health metrics
         private System.Windows.Forms.Timer heartbeatTimer; // For online status
+        private System.Windows.Forms.Timer frequentHealthTimer; // For frequent health scans when enabled
         private AgentConfiguration _config;
         private IHealthCollectorService _healthCollector;
         private IApiClientService _apiClient;
+        private IConfigurationManager _configManager;
         private bool _isMonitoring = false;
 
         public SystemTrayForm()
@@ -32,7 +34,8 @@ namespace GridHealth.Agent.Forms
             InitializeComponent();
             
             // Initialize services
-            _healthCollector = new HealthCollectorService(new LoggerFactory().CreateLogger<HealthCollectorService>());
+            _configManager = new ConfigurationManager(new LoggerFactory().CreateLogger<ConfigurationManager>());
+            _healthCollector = new HealthCollectorService(new LoggerFactory().CreateLogger<HealthCollectorService>(), _configManager);
             _apiClient = new ApiClientService(new LoggerFactory().CreateLogger<ApiClientService>());
             
             // Load configuration
@@ -44,7 +47,7 @@ namespace GridHealth.Agent.Forms
             // Start monitoring if configured
             if (_config?.IsConfigured == true)
             {
-                StartMonitoring();
+                _ = StartMonitoring(); // Fire and forget for constructor
             }
         }
 
@@ -81,6 +84,11 @@ namespace GridHealth.Agent.Forms
             statusItem.Enabled = false;
             trayMenu.Items.Add(statusItem);
 
+            // Health score item (will be updated after scans)
+            var healthScoreItem = new ToolStripMenuItem("Health Score: --");
+            healthScoreItem.Enabled = false;
+            trayMenu.Items.Add(healthScoreItem);
+
             trayMenu.Items.Add(new ToolStripSeparator());
 
             // Start/Stop monitoring
@@ -92,6 +100,11 @@ namespace GridHealth.Agent.Forms
             var configItem = new ToolStripMenuItem("Configuration");
             configItem.Click += (s, e) => OpenConfiguration();
             trayMenu.Items.Add(configItem);
+
+            // Manual health scan
+            var scanItem = new ToolStripMenuItem("Run Health Scan Now");
+            scanItem.Click += async (s, e) => await PerformHealthScan();
+            trayMenu.Items.Add(scanItem);
 
             // View logs
             var logsItem = new ToolStripMenuItem("View Logs");
@@ -129,55 +142,23 @@ namespace GridHealth.Agent.Forms
             return SystemIcons.Application;
         }
 
-        private void LoadConfiguration()
+        private async void LoadConfiguration()
         {
             try
             {
-                // Load configuration from file
-                string configPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "GridHealth",
-                    "config.json"
-                );
-
-                if (File.Exists(configPath))
+                // Load configuration using ConfigurationManager
+                _config = await _configManager.LoadConfigurationAsync();
+                
+                if (_config?.IsConfigured == true && 
+                    !string.IsNullOrEmpty(_config.LicenseKey) &&
+                    !string.IsNullOrEmpty(_config.ApiEndpoint))
                 {
-                    try
-                    {
-                        string json = File.ReadAllText(configPath);
-                        _config = System.Text.Json.JsonSerializer.Deserialize<AgentConfiguration>(json);
-                        
-                        // Only auto-start monitoring if we have a valid, complete configuration
-                        if (_config?.IsConfigured == true && 
-                            !string.IsNullOrEmpty(_config.LicenseKey) &&
-                            !string.IsNullOrEmpty(_config.ApiEndpoint))
-                        {
-                            // Don't auto-start monitoring - let user choose
-                            // StartMonitoring();
-                        }
-                        else
-                        {
-                            // Configuration is incomplete, show config form
-                            ShowConfigurationForm();
-                        }
-                    }
-                    catch (JsonException ex)
-                    {
-                        // Configuration file is corrupted, delete it and show config form
-                        try
-                        {
-                            File.Delete(configPath);
-                        }
-                        catch { }
-                        
-                        MessageBox.Show("Configuration file was corrupted and has been reset.", "Configuration Reset", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        ShowConfigurationForm();
-                    }
+                    // Configuration is valid, but don't auto-start monitoring
+                    // StartMonitoring();
                 }
                 else
                 {
-                    // Show configuration form if no config exists
+                    // Configuration is incomplete, show config form
                     ShowConfigurationForm();
                 }
             }
@@ -189,17 +170,21 @@ namespace GridHealth.Agent.Forms
             }
         }
 
-        private void ShowConfigurationForm()
+        private async void ShowConfigurationForm()
         {
             var configForm = new ConfigurationForm();
             if (configForm.ShowDialog() == DialogResult.OK)
             {
                 _config = configForm.Configuration;
-                StartMonitoring();
+                
+                // Save configuration
+                await _configManager.SaveConfigurationAsync(_config);
+                
+                _ = StartMonitoring(); // Fire and forget
             }
         }
 
-        private void OpenConfiguration()
+        private async void OpenConfiguration()
         {
             if (_config?.IsConfigured == true)
             {
@@ -207,7 +192,20 @@ namespace GridHealth.Agent.Forms
                 if (configForm.ShowDialog() == DialogResult.OK)
                 {
                     _config = configForm.Configuration;
-                    RestartMonitoring();
+                    
+                    // Save configuration
+                    await _configManager.SaveConfigurationAsync(_config);
+                    
+                    // Restart monitoring with new settings
+                    if (_isMonitoring)
+                    {
+                        RestartMonitoring();
+                    }
+                    else
+                    {
+                        // If monitoring is not running, just restart the frequent health timer
+                        RestartFrequentHealthTimer();
+                    }
                 }
             }
             else
@@ -216,7 +214,7 @@ namespace GridHealth.Agent.Forms
             }
         }
 
-        private void ToggleMonitoring()
+        private async void ToggleMonitoring()
         {
             if (_isMonitoring)
             {
@@ -224,13 +222,12 @@ namespace GridHealth.Agent.Forms
             }
             else
             {
-                // StartMonitoring is now async, but we can't make this method async
-                // So we'll call it without awaiting - the validation will happen in StartMonitoring
-                StartMonitoring();
+                // StartMonitoring is now async
+                await StartMonitoring();
             }
         }
 
-        private async void StartMonitoring()
+        private async Task StartMonitoring()
         {
             if (_config?.IsConfigured != true)
             {
@@ -272,34 +269,14 @@ namespace GridHealth.Agent.Forms
             try
             {
                 _isMonitoring = true;
-                
-                // Update tray menu
-                var monitoringItem = trayMenu.Items[2] as ToolStripMenuItem;
-                if (monitoringItem != null)
-                {
-                    monitoringItem.Text = "Stop Monitoring";
-                }
 
-                var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
-                if (statusItem != null)
-                {
-                    statusItem.Text = $"Status: Online - Monitoring ({_config.ScanFrequency})";
-                }
-
-                // Start heartbeat timer (every 2 minutes for online status)
-                heartbeatTimer = new System.Windows.Forms.Timer
-                {
-                    Interval = 2 * 60 * 1000 // 2 minutes in milliseconds
-                };
-                heartbeatTimer.Tick += async (s, e) => await SendHeartbeat();
-                heartbeatTimer.Start();
-
-                // Start health monitoring timer (based on user preference)
+                // Calculate monitoring interval based on scan frequency
                 int intervalMinutes = _config.ScanFrequency switch
                 {
-                    ScanFrequency.Daily => 1440,      // 24 hours
-                    ScanFrequency.Weekly => 10080,    // 7 days
-                    ScanFrequency.Monthly => 43200,   // 30 days
+                    ScanFrequency.Hourly => 60,        // 1 hour
+                    ScanFrequency.Daily => 1440,       // 24 hours
+                    ScanFrequency.Weekly => 10080,     // 7 days
+                    ScanFrequency.Monthly => 43200,    // 30 days
                     _ => 1440
                 };
 
@@ -310,17 +287,56 @@ namespace GridHealth.Agent.Forms
                 monitoringTimer.Tick += async (s, e) => await PerformHealthScan();
                 monitoringTimer.Start();
 
+                // Start heartbeat timer (every 2 minutes for online status)
+                heartbeatTimer = new System.Windows.Forms.Timer
+                {
+                    Interval = 2 * 60 * 1000 // 2 minutes
+                };
+                heartbeatTimer.Tick += async (s, e) => await SendHeartbeat();
+                heartbeatTimer.Start();
+
+                // Start frequent health timer if enabled (every 5 minutes)
+                // Temporarily force enable frequent health scans for debugging
+                bool forceEnableFrequentScans = true; // _config.EnableFrequentHealthScans;
+                if (forceEnableFrequentScans)
+                {
+                    frequentHealthTimer = new System.Windows.Forms.Timer
+                    {
+                        Interval = 5 * 60 * 1000 // 5 minutes
+                    };
+                    frequentHealthTimer.Tick += async (s, e) => await PerformHealthScan();
+                    frequentHealthTimer.Start();
+                }
+
+                // Update status to show monitoring started
+                var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
+                if (statusItem != null)
+                {
+                    statusItem.Text = "Status: Starting monitoring...";
+                }
+
                 // Send initial heartbeat and perform initial scan
                 _ = Task.Run(async () => 
                 {
                     await SendHeartbeat();
+                    // Always perform a full health scan on startup
                     await PerformHealthScan();
                 });
 
                 // Show notification
+                var frequentScanInfo = _config.EnableFrequentHealthScans ? "Every 5 minutes" : "Disabled";
+                var scanFrequencyInfo = _config.ScanFrequency switch
+                {
+                    ScanFrequency.Hourly => "Every hour",
+                    ScanFrequency.Daily => "Daily",
+                    ScanFrequency.Weekly => "Weekly",
+                    ScanFrequency.Monthly => "Monthly",
+                    _ => "Daily"
+                };
                 trayIcon.ShowBalloonTip(3000, "GridHealth Agent", 
                     "System monitoring started successfully!\nOnline status updates: Every 2 minutes\n" +
-                    $"Health metrics: {_config.ScanFrequency}", ToolTipIcon.Info);
+                    $"Health metrics: {scanFrequencyInfo}\n" +
+                    $"Frequent health scans: {frequentScanInfo}", ToolTipIcon.Info);
             }
             catch (Exception ex)
             {
@@ -336,14 +352,16 @@ namespace GridHealth.Agent.Forms
             {
                 _isMonitoring = false;
                 
-                // Stop both timers
+                // Stop all timers
                 heartbeatTimer?.Stop();
                 heartbeatTimer?.Dispose();
                 monitoringTimer?.Stop();
                 monitoringTimer?.Dispose();
+                frequentHealthTimer?.Stop();
+                frequentHealthTimer?.Dispose();
 
                 // Update tray menu
-                var monitoringItem = trayMenu.Items[2] as ToolStripMenuItem;
+                var monitoringItem = trayMenu.Items[3] as ToolStripMenuItem; // Updated index due to health score item
                 if (monitoringItem != null)
                 {
                     monitoringItem.Text = "Start Monitoring";
@@ -353,6 +371,13 @@ namespace GridHealth.Agent.Forms
                 if (statusItem != null)
                 {
                     statusItem.Text = "Status: Offline - Stopped";
+                }
+
+                var healthScoreItem = trayMenu.Items[1] as ToolStripMenuItem;
+                if (healthScoreItem != null)
+                {
+                    healthScoreItem.Text = "Health Score: --";
+                    healthScoreItem.Enabled = false;
                 }
 
                 trayIcon.ShowBalloonTip(3000, "GridHealth Agent", 
@@ -365,10 +390,30 @@ namespace GridHealth.Agent.Forms
             }
         }
 
-        private void RestartMonitoring()
+        private async void RestartMonitoring()
         {
             StopMonitoring();
-            StartMonitoring();
+            await StartMonitoring();
+        }
+
+        private void RestartFrequentHealthTimer()
+        {
+            // Stop existing frequent health timer
+            frequentHealthTimer?.Stop();
+            frequentHealthTimer?.Dispose();
+
+            // Start new frequent health timer if enabled
+            // Temporarily force enable frequent health scans for debugging
+            bool forceEnableFrequentScans = true; // _isMonitoring && _config.EnableFrequentHealthScans;
+            if (forceEnableFrequentScans)
+            {
+                frequentHealthTimer = new System.Windows.Forms.Timer
+                {
+                    Interval = 5 * 60 * 1000 // 5 minutes
+                };
+                frequentHealthTimer.Tick += async (s, e) => await PerformHealthScan();
+                frequentHealthTimer.Start();
+            }
         }
 
         private int _heartbeatCount = 0;
@@ -412,10 +457,10 @@ namespace GridHealth.Agent.Forms
                     if (response.IsSuccessStatusCode)
                     {
                         // Update status to show successful connection
-                        var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
-                        if (statusItem != null)
+                        var heartbeatSuccessStatusItem = trayMenu.Items[0] as ToolStripMenuItem;
+                        if (heartbeatSuccessStatusItem != null)
                         {
-                            statusItem.Text = $"Status: Connected - Heartbeat #{_heartbeatCount}";
+                            heartbeatSuccessStatusItem.Text = $"Status: Online - Heartbeat #{_heartbeatCount}";
                         }
 
                         // Periodically validate license (every 10 heartbeats)
@@ -427,10 +472,18 @@ namespace GridHealth.Agent.Forms
                     else
                     {
                         // Update status to show connection issues
-                        var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
-                        if (statusItem != null)
+                        var connectionStatusItem = trayMenu.Items[0] as ToolStripMenuItem;
+                        if (connectionStatusItem != null)
                         {
-                            statusItem.Text = $"Status: Connection Error - {response.StatusCode}";
+                            connectionStatusItem.Text = $"Status: Connection Error - {response.StatusCode}";
+                        }
+
+                        // Reset health score item
+                        var connectionHealthScoreItem = trayMenu.Items[1] as ToolStripMenuItem;
+                        if (connectionHealthScoreItem != null)
+                        {
+                            connectionHealthScoreItem.Text = "Health Score: --";
+                            connectionHealthScoreItem.Enabled = false;
                         }
                     }
                 }
@@ -439,10 +492,18 @@ namespace GridHealth.Agent.Forms
             {
                 Console.WriteLine($"❌ Error sending heartbeat: {ex.Message}");
                 // Update status to show error
-                var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
-                if (statusItem != null)
+                var heartbeatErrorStatusItem = trayMenu.Items[0] as ToolStripMenuItem;
+                if (heartbeatErrorStatusItem != null)
                 {
-                    statusItem.Text = $"Status: Error - {ex.Message}";
+                    heartbeatErrorStatusItem.Text = $"Status: Error - {ex.Message}";
+                }
+
+                // Reset health score item
+                var heartbeatErrorHealthScoreItem = trayMenu.Items[1] as ToolStripMenuItem;
+                if (heartbeatErrorHealthScoreItem != null)
+                {
+                    heartbeatErrorHealthScoreItem.Text = "Health Score: --";
+                    heartbeatErrorHealthScoreItem.Enabled = false;
                 }
             }
         }
@@ -479,10 +540,42 @@ namespace GridHealth.Agent.Forms
             {
                 if (!_isMonitoring) return;
 
+                // Update status to show scan in progress
+                var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
+                if (statusItem != null)
+                {
+                    statusItem.Text = "Status: Running Health Scan...";
+                }
+
+                // Update monitoring item text
+                var monitoringItem = trayMenu.Items[3] as ToolStripMenuItem; // Updated index due to health score item
+                if (monitoringItem != null)
+                {
+                    monitoringItem.Text = "Stop Monitoring";
+                }
+
                 // Collect comprehensive health data including calculated health score
                 var healthData = await _healthCollector.CollectHealthDataAsync();
                 if (healthData != null)
                 {
+                    // Debug logging to see what we got
+                    Console.WriteLine($"🔍 Health data collected: {healthData != null}");
+                    Console.WriteLine($"🔍 Health score: {healthData.HealthScore != null}");
+                    if (healthData.HealthScore != null)
+                    {
+                        Console.WriteLine($"🔍 Overall score: {healthData.HealthScore.Overall}");
+                        Console.WriteLine($"🔍 Performance: {healthData.HealthScore.Performance}");
+                        Console.WriteLine($"🔍 Disk: {healthData.HealthScore.Disk}");
+                        Console.WriteLine($"🔍 Memory: {healthData.HealthScore.Memory}");
+                        Console.WriteLine($"🔍 Network: {healthData.HealthScore.Network}");
+                        Console.WriteLine($"🔍 Services: {healthData.HealthScore.Services}");
+                        Console.WriteLine($"🔍 Security: {healthData.HealthScore.Security}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("❌ Health score is null!");
+                    }
+
                     // Log health score information
                     if (healthData.HealthScore != null)
                     {
@@ -497,12 +590,20 @@ namespace GridHealth.Agent.Forms
                     if (result)
                     {
                         // Update status with health score
-                        var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
-                        if (statusItem != null)
+                        var successStatusItem = trayMenu.Items[0] as ToolStripMenuItem;
+                        var successHealthScoreItem = trayMenu.Items[1] as ToolStripMenuItem;
+                        
+                        if (successStatusItem != null)
+                        {
+                            successStatusItem.Text = $"Status: Online - Last scan: {DateTime.Now:HH:mm}";
+                        }
+                        
+                        if (successHealthScoreItem != null)
                         {
                             var healthScore = healthData.HealthScore?.Overall ?? 0;
                             var healthStatus = healthScore >= 80 ? "🟢" : healthScore >= 60 ? "🟡" : "🔴";
-                            statusItem.Text = $"Status: Online - Health: {healthStatus} {healthScore}/100 - Last scan: {DateTime.Now:HH:mm}";
+                            successHealthScoreItem.Text = $"Health Score: {healthStatus} {healthScore}/100";
+                            successHealthScoreItem.Enabled = true;
                         }
                     }
                 }
@@ -511,10 +612,18 @@ namespace GridHealth.Agent.Forms
             {
                 Console.WriteLine($"❌ Health scan error: {ex.Message}");
                 // Update status to show error
-                var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
-                if (statusItem != null)
+                var errorStatusItem = trayMenu.Items[0] as ToolStripMenuItem;
+                if (errorStatusItem != null)
                 {
-                    statusItem.Text = $"Status: Scan Error - {ex.Message}";
+                    errorStatusItem.Text = $"Status: Scan Error - {ex.Message}";
+                }
+
+                // Reset health score item
+                var errorHealthScoreItem = trayMenu.Items[1] as ToolStripMenuItem;
+                if (errorHealthScoreItem != null)
+                {
+                    errorHealthScoreItem.Text = "Health Score: --";
+                    errorHealthScoreItem.Enabled = false;
                 }
             }
         }
@@ -713,19 +822,50 @@ namespace GridHealth.Agent.Forms
         {
             try
             {
-                string logPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "GridHealth",
-                    "logs"
-                );
-
-                if (Directory.Exists(logPath))
+                // Try multiple possible log locations
+                var possibleLogPaths = new List<string>
                 {
-                    System.Diagnostics.Process.Start("explorer.exe", logPath);
+                    // Current directory logs
+                    Path.Combine(Application.StartupPath, "logs"),
+                    // AppData logs
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GridHealth", "logs"),
+                    // Working directory logs
+                    Path.Combine(Directory.GetCurrentDirectory(), "logs"),
+                    // Console output file (if redirected)
+                    Path.Combine(Application.StartupPath, "output.log")
+                };
+
+                string logPath = null;
+                foreach (var path in possibleLogPaths)
+                {
+                    if (Directory.Exists(path) || File.Exists(path))
+                    {
+                        logPath = path;
+                        break;
+                    }
+                }
+
+                if (logPath != null)
+                {
+                    if (Directory.Exists(logPath))
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", logPath);
+                    }
+                    else if (File.Exists(logPath))
+                    {
+                        // Open the log file with default text editor
+                        System.Diagnostics.Process.Start("notepad.exe", logPath);
+                    }
                 }
                 else
                 {
-                    MessageBox.Show("No logs found.", "Logs", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Show current console output if available
+                    var message = "No log files found in expected locations.\n\n" +
+                                "Expected locations:\n" +
+                                string.Join("\n", possibleLogPaths.Select(p => $"• {p}")) +
+                                "\n\nConsole output should be visible if running from command line.";
+                    
+                    MessageBox.Show(message, "Logs", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)

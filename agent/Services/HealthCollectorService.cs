@@ -12,14 +12,16 @@ public class HealthCollectorService : IHealthCollectorService
 {
     private readonly ILogger<HealthCollectorService> _logger;
     private readonly HealthCalculationService _healthCalculationService;
+    private readonly IConfigurationManager _configManager;
     private PerformanceCounter? _cpuCounter;
     private PerformanceCounter? _memoryCounter;
     private PerformanceCounter? _diskReadCounter;
     private PerformanceCounter? _diskWriteCounter;
 
-    public HealthCollectorService(ILogger<HealthCollectorService> logger)
+    public HealthCollectorService(ILogger<HealthCollectorService> logger, IConfigurationManager configManager)
     {
         _logger = logger;
+        _configManager = configManager;
         _healthCalculationService = new HealthCalculationService();
         
         // TEMPORARILY DISABLE PERFORMANCE COUNTERS TO FIX GUI HANGING ISSUE
@@ -39,8 +41,9 @@ public class HealthCollectorService : IHealthCollectorService
             var healthData = new HealthData
             {
                 DeviceId = GetDeviceId(),
-                LicenseKey = GetLicenseKey(),
+                LicenseKey = await GetLicenseKeyAsync(),
                 Timestamp = DateTime.UtcNow,
+                Type = "health_scan",
                 SystemInfo = await CollectSystemInfoAsync(),
                 PerformanceMetrics = await CollectPerformanceMetricsAsync(),
                 DiskHealth = await CollectDiskHealthAsync(),
@@ -53,6 +56,18 @@ public class HealthCollectorService : IHealthCollectorService
 
             // Calculate health score after all data is collected
             var calculatedScore = _healthCalculationService.CalculateOverallHealthScore(healthData);
+            Console.WriteLine($"🔍 HealthCalculationService returned: {calculatedScore != null}");
+            if (calculatedScore != null)
+            {
+                Console.WriteLine($"🔍 Calculated overall score: {calculatedScore.Overall}");
+                Console.WriteLine($"🔍 Performance: {calculatedScore.Performance}");
+                Console.WriteLine($"🔍 Disk: {calculatedScore.Disk}");
+                Console.WriteLine($"🔍 Memory: {calculatedScore.Memory}");
+                Console.WriteLine($"🔍 Network: {calculatedScore.Network}");
+                Console.WriteLine($"🔍 Services: {calculatedScore.Services}");
+                Console.WriteLine($"🔍 Security: {calculatedScore.Security}");
+            }
+            
             healthData.HealthScore = new Models.HealthScore
             {
                 Overall = calculatedScore.Overall,
@@ -74,6 +89,7 @@ public class HealthCollectorService : IHealthCollectorService
                 }
             };
 
+            Console.WriteLine($"🔍 Final health score assigned: {healthData.HealthScore.Overall}");
             _logger.LogInformation("Health data collection completed successfully");
             return healthData;
         }
@@ -172,26 +188,19 @@ public class HealthCollectorService : IHealthCollectorService
         return $"HASH-{Math.Abs(machineName.GetHashCode()):X8}";
     }
 
-    private string GetLicenseKey()
+    private async Task<string> GetLicenseKeyAsync()
     {
         try
         {
-            var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
-                "GridHealth", "agent-config.json");
-            
-            if (File.Exists(configPath))
-            {
-                var json = File.ReadAllText(configPath);
-                var config = System.Text.Json.JsonSerializer.Deserialize<AgentConfiguration>(json);
-                return config?.LicenseKey ?? string.Empty;
-            }
+            // Use the injected configuration manager instead of reading a separate file
+            var licenseKey = await _configManager.GetLicenseKeyAsync();
+            return licenseKey ?? string.Empty;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not read license key from config");
+            _logger.LogWarning(ex, "Could not read license key from config manager: {Message}", ex.Message);
+            return string.Empty;
         }
-        
-        return string.Empty;
     }
 
     private async Task<SystemInfo> CollectSystemInfoAsync()

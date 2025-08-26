@@ -70,9 +70,10 @@ namespace GridHealth.Agent.Services
                 // Calculate monitoring interval based on scan frequency
                 int intervalMinutes = _config.ScanFrequency switch
                 {
-                    ScanFrequency.Daily => 1440,      // 24 hours
-                    ScanFrequency.Weekly => 10080,    // 7 days
-                    ScanFrequency.Monthly => 43200,   // 30 days
+                    ScanFrequency.Hourly => 60,        // 1 hour
+                    ScanFrequency.Daily => 1440,       // 24 hours
+                    ScanFrequency.Weekly => 10080,     // 7 days
+                    ScanFrequency.Monthly => 43200,    // 30 days
                     _ => 1440 // Default to daily
                 };
 

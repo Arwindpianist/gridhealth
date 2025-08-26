@@ -13,6 +13,9 @@ public class HealthData
     [JsonPropertyName("timestamp")]
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "health_scan";
+
     [JsonPropertyName("system_info")]
     public SystemInfo SystemInfo { get; set; } = new();
 

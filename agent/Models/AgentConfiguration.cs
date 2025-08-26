@@ -2,6 +2,7 @@ namespace GridHealth.Agent.Models;
 
 public enum ScanFrequency
 {
+    Hourly = 60,       // 1 hour in minutes
     Daily = 1440,      // 24 hours in minutes
     Weekly = 10080,    // 7 days in minutes
     Monthly = 43200    // 30 days in minutes
@@ -16,6 +17,7 @@ public class AgentConfiguration
     public string ApiEndpoint { get; set; } = "https://gridhealth.arwindpianist.store";
     public ScanFrequency ScanFrequency { get; set; } = ScanFrequency.Daily;
     public int ScanIntervalMinutes { get; set; } = 1440; // Default to daily
+    public bool EnableFrequentHealthScans { get; set; } = true; // Enable more frequent health scans by default
     public int RetryAttempts { get; set; } = 3;
     public int RetryDelaySeconds { get; set; } = 30;
     public string LogLevel { get; set; } = "info";

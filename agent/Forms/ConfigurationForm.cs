@@ -12,12 +12,14 @@ namespace GridHealth.Agent.Forms
         private TextBox txtLicenseKey;
         private ComboBox cboScanFrequency;
         private TextBox txtApiEndpoint;
+        private CheckBox chkFrequentHealthScans;
         private Button btnSave;
         private Button btnCancel;
         private Label lblTitle;
         private Label lblLicenseKey;
         private Label lblScanFrequency;
         private Label lblApiEndpoint;
+        private Label lblFrequentHealthScans;
         private Label lblNote;
 
         public AgentConfiguration Configuration { get; private set; }
@@ -35,7 +37,7 @@ namespace GridHealth.Agent.Forms
 
             // Form properties
             this.Text = "GridHealth Agent Configuration";
-            this.Size = new Size(500, 400);
+            this.Size = new Size(550, 500); // Increased width and height for better fit
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -69,7 +71,7 @@ namespace GridHealth.Agent.Forms
             txtLicenseKey = new TextBox
             {
                 Location = new Point(160, 80),
-                Size = new Size(300, 25),
+                Size = new Size(350, 25), // Increased width
                 Font = new Font("Segoe UI", 10),
                 BackColor = Color.FromArgb(15, 23, 42), // Dark blue
                 ForeColor = Color.White,
@@ -90,7 +92,7 @@ namespace GridHealth.Agent.Forms
             cboScanFrequency = new ComboBox
             {
                 Location = new Point(160, 120),
-                Size = new Size(300, 25),
+                Size = new Size(350, 25), // Increased width
                 Font = new Font("Segoe UI", 10),
                 BackColor = Color.FromArgb(15, 23, 42),
                 ForeColor = Color.White,
@@ -99,6 +101,7 @@ namespace GridHealth.Agent.Forms
 
             cboScanFrequency.Items.AddRange(new object[]
             {
+                "Hourly",
                 "Daily",
                 "Weekly", 
                 "Monthly"
@@ -118,13 +121,34 @@ namespace GridHealth.Agent.Forms
             txtApiEndpoint = new TextBox
             {
                 Location = new Point(160, 160),
-                Size = new Size(300, 25),
+                Size = new Size(350, 25), // Increased width
                 Font = new Font("Segoe UI", 10),
                 BackColor = Color.FromArgb(15, 23, 42),
                 ForeColor = Color.FromArgb(156, 163, 175), // Gray-400
                 BorderStyle = BorderStyle.FixedSingle,
                 ReadOnly = true,
                 Text = "https://gridhealth.arwindpianist.store"
+            };
+
+            // Frequent Health Scans
+            lblFrequentHealthScans = new Label
+            {
+                Text = "Enable Frequent Health Scans:",
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(203, 213, 225),
+                Location = new Point(30, 200),
+                Size = new Size(200, 25),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            chkFrequentHealthScans = new CheckBox
+            {
+                Location = new Point(240, 200),
+                Size = new Size(150, 20),
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.FromArgb(15, 23, 42),
+                ForeColor = Color.White,
+                Checked = Configuration.EnableFrequentHealthScans
             };
 
             // Note
@@ -134,16 +158,16 @@ namespace GridHealth.Agent.Forms
                        "Please ensure your IT team has whitelisted this domain.",
                 Font = new Font("Segoe UI", 9),
                 ForeColor = Color.FromArgb(156, 163, 175), // Gray-400
-                Location = new Point(30, 200),
-                Size = new Size(430, 40),
+                Location = new Point(30, 240),
+                Size = new Size(480, 50), // Increased width and height
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            // Buttons
+            // Buttons - positioned below the note with proper spacing
             btnSave = new Button
             {
                 Text = "Save Configuration",
-                Location = new Point(160, 260),
+                Location = new Point(160, 310), // Moved down to avoid overlap
                 Size = new Size(140, 35),
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 BackColor = Color.FromArgb(59, 130, 246), // Blue-500
@@ -156,7 +180,7 @@ namespace GridHealth.Agent.Forms
             btnCancel = new Button
             {
                 Text = "Cancel",
-                Location = new Point(320, 260),
+                Location = new Point(320, 310), // Moved down to avoid overlap
                 Size = new Size(140, 35),
                 Font = new Font("Segoe UI", 10),
                 BackColor = Color.FromArgb(55, 65, 81), // Gray-600
@@ -176,6 +200,8 @@ namespace GridHealth.Agent.Forms
                 cboScanFrequency,
                 lblApiEndpoint,
                 txtApiEndpoint,
+                lblFrequentHealthScans,
+                chkFrequentHealthScans,
                 lblNote,
                 btnSave,
                 btnCancel
@@ -190,18 +216,32 @@ namespace GridHealth.Agent.Forms
             {
                 txtLicenseKey.Text = Configuration.LicenseKey ?? "";
                 
-                if (Configuration.ScanFrequency != ScanFrequency.Daily)
+                // Set the scan frequency dropdown based on configuration
+                switch (Configuration.ScanFrequency)
                 {
-                    cboScanFrequency.SelectedItem = Configuration.ScanFrequency.ToString();
+                    case ScanFrequency.Hourly:
+                        cboScanFrequency.SelectedIndex = 0;
+                        break;
+                    case ScanFrequency.Daily:
+                        cboScanFrequency.SelectedIndex = 1;
+                        break;
+                    case ScanFrequency.Weekly:
+                        cboScanFrequency.SelectedIndex = 2;
+                        break;
+                    case ScanFrequency.Monthly:
+                        cboScanFrequency.SelectedIndex = 3;
+                        break;
+                    default:
+                        cboScanFrequency.SelectedIndex = 1; // Default to Daily
+                        break;
                 }
-                else
-                {
-                    cboScanFrequency.SelectedIndex = 0; // Default to Daily
-                }
+                
+                chkFrequentHealthScans.Checked = Configuration.EnableFrequentHealthScans;
             }
             else
             {
-                cboScanFrequency.SelectedIndex = 0; // Default to Daily
+                cboScanFrequency.SelectedIndex = 1; // Default to Daily
+                chkFrequentHealthScans.Checked = true; // Default to enabled
             }
         }
 
@@ -262,7 +302,8 @@ namespace GridHealth.Agent.Forms
                     LastConfigured = DateTime.UtcNow,
                     OrganizationName = validationResult.OrganizationName,
                     DeviceLimit = validationResult.DeviceLimit,
-                    LicenseType = validationResult.LicenseType
+                    LicenseType = validationResult.LicenseType,
+                    EnableFrequentHealthScans = chkFrequentHealthScans.Checked
                 };
 
                 // Save configuration
@@ -292,6 +333,7 @@ namespace GridHealth.Agent.Forms
         {
             return frequency?.ToLower() switch
             {
+                "hourly" => ScanFrequency.Hourly,
                 "weekly" => ScanFrequency.Weekly,
                 "monthly" => ScanFrequency.Monthly,
                 _ => ScanFrequency.Daily
