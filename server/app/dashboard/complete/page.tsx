@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseAdmin } from '../../../lib/supabase'
-import { calculateHealthScore, getOrganizationHealthSummary } from '../../../lib/healthMetrics'
+import { calculateHealthScore, getOrganizationHealthSummary, getDeviceHealthData } from '../../../lib/healthMetrics'
 import { generateOrganizationReportCSV } from '../../../lib/reportGenerator'
 
 async function getDashboardData(userId: string) {
@@ -61,6 +61,17 @@ async function getDashboardData(userId: string) {
       .order('timestamp', { ascending: false })
       .limit(100)
 
+    // Get comprehensive health data for each device
+    const deviceHealthData = await Promise.all(
+      devices?.map(async (device) => {
+        const healthData = await getDeviceHealthData(device.device_id)
+        return {
+          device,
+          healthData
+        }
+      }) || []
+    )
+
     // Get organization health summary if user has organizations
     let organizationHealthSummary = null
     if (organizations && organizations.length > 0) {
@@ -75,6 +86,7 @@ async function getDashboardData(userId: string) {
       licenses: licenses || [],
       devices: devices || [],
       healthMetrics: healthMetrics || [],
+      deviceHealthData: deviceHealthData || [],
       organizationHealthSummary,
       isIndividual
     }
@@ -97,7 +109,7 @@ export default async function CompleteDashboardPage() {
     redirect('/onboarding')
   }
 
-  const { user, roles, organizations, companies, licenses, devices, healthMetrics, organizationHealthSummary, isIndividual } = dashboardData
+  const { user, roles, organizations, companies, licenses, devices, healthMetrics, deviceHealthData, organizationHealthSummary, isIndividual } = dashboardData
   
   // Calculate stats
   const totalDevices = devices.length
@@ -282,25 +294,9 @@ export default async function CompleteDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-dark-800 divide-y divide-dark-700">
-                  {devices.map((device) => {
-                    // Find the latest comprehensive health scan for this device
-                    const latestHealthScan = healthMetrics.find(h => 
-                      h.device_id === device.device_id && 
-                      h.metric_type === 'health_scan'
-                    )
-                    
-                    const healthScore = latestHealthScan ? {
-                      overall: latestHealthScan.value || 100,
-                      performance: latestHealthScan.performance_metrics?.cpu_usage_percent ? 
-                        Math.max(0, 100 - (latestHealthScan.performance_metrics.cpu_usage_percent + latestHealthScan.performance_metrics.memory_usage_percent) / 2) : 100,
-                      disk: latestHealthScan.disk_health?.[0]?.free_space_percent ? 
-                        Math.max(0, Math.min(100, latestHealthScan.disk_health[0].free_space_percent)) : 100,
-                      memory: latestHealthScan.memory_health?.memory_usage_percent ? 
-                        Math.max(0, 100 - latestHealthScan.memory_health.memory_usage_percent) : 100,
-                      network: latestHealthScan.network_health?.internet_connectivity ? 100 : 80,
-                      services: latestHealthScan.service_health?.filter((s: any) => s.status === 'Running').length === latestHealthScan.service_health?.length ? 100 : 80,
-                      security: latestHealthScan.security_health?.uac_enabled ? 100 : 80
-                    } : null
+                  {deviceHealthData.map(({ device, healthData }) => {
+                    const healthScore = healthData?.health_score
+                    const latestHealthScan = healthData?.latest_health_scan
                     
                     return (
                       <tr key={device.device_id} className="hover:bg-dark-700 transition-colors">
