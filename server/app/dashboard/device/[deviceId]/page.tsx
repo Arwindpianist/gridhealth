@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseAdmin } from '../../../../lib/supabase'
 import { getDeviceHealthData } from '../../../../lib/healthMetrics'
-import { generateDeviceReportCSV } from '../../../../lib/reportGenerator'
+
 import HealthMetricsDisplay from '../../../components/HealthMetricsDisplay'
 
 interface DevicePageProps {
@@ -65,8 +65,7 @@ export default async function DevicePage({ params }: DevicePageProps) {
 
   const organizationName = license?.organizations?.name || 'Unknown Organization'
 
-  // Generate CSV report
-  const csvReport = await generateDeviceReportCSV(deviceId)
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900">
@@ -115,18 +114,16 @@ export default async function DevicePage({ params }: DevicePageProps) {
                 </svg>
                 Back to Dashboard
               </Link>
-              {csvReport && (
-                <a 
-                  href={`data:text/csv;charset=utf-8,${encodeURIComponent(csvReport)}`}
-                  download={`device-report-${device.device_id}.csv`}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105 flex items-center"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Download Report
-                </a>
-              )}
+                             <a 
+                 href={`/api/reports/device/${device.device_id}/pdf`}
+                 target="_blank"
+                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105 flex items-center"
+               >
+                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                 </svg>
+                 Download PDF Report
+               </a>
               <Link 
                 href="/admin" 
                 className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105"
