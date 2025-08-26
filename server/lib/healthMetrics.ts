@@ -22,6 +22,7 @@ export interface DeviceHealthData {
   device_id: string
   last_heartbeat: any
   last_health_check: any
+  latest_health_scan: any
   health_score: HealthScore
   status: 'online' | 'offline' | 'warning'
   uptime_percentage: number
@@ -198,6 +199,16 @@ export async function getDeviceHealthData(deviceId: string): Promise<DeviceHealt
       .order('timestamp', { ascending: false })
       .limit(10)
 
+    // Get the latest comprehensive health scan data
+    const { data: latestHealthScan } = await supabaseAdmin
+      .from('health_metrics')
+      .select('*')
+      .eq('device_id', deviceId)
+      .eq('metric_type', 'health_scan')
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .single()
+
     // Calculate device status
     let status: 'online' | 'offline' | 'warning' = 'offline'
     let uptimePercentage = 0
@@ -219,30 +230,58 @@ export async function getDeviceHealthData(deviceId: string): Promise<DeviceHealt
       }
     }
 
-    // Calculate health score from latest health check
-    const latestHealthCheck = healthChecks?.[0]
-    const healthScore = latestHealthCheck ? calculateHealthScore(latestHealthCheck) : {
-      overall: 100,
-      performance: 100,
-      disk: 100,
-      memory: 100,
-      network: 100,
-      services: 100,
-      security: 100,
-      details: {
-        performance: {},
-        disk: {},
-        memory: {},
-        network: {},
-        services: {},
-        security: {}
+    // Calculate health score from latest comprehensive health scan
+    let healthScore: HealthScore
+    
+    if (latestHealthScan) {
+      // Use the comprehensive health scan data directly
+      healthScore = {
+        overall: latestHealthScan.value || 100,
+        performance: latestHealthScan.performance_metrics?.cpu_usage_percent ? 
+          Math.max(0, 100 - (latestHealthScan.performance_metrics.cpu_usage_percent + latestHealthScan.performance_metrics.memory_usage_percent) / 2) : 100,
+        disk: latestHealthScan.disk_health?.[0]?.free_space_percent ? 
+          Math.max(0, Math.min(100, latestHealthScan.disk_health[0].free_space_percent)) : 100,
+        memory: latestHealthScan.memory_health?.memory_usage_percent ? 
+          Math.max(0, 100 - latestHealthScan.memory_health.memory_usage_percent) : 100,
+        network: latestHealthScan.network_health?.internet_connectivity ? 100 : 80,
+        services: latestHealthScan.service_health?.filter((s: any) => s.status === 'Running').length === latestHealthScan.service_health?.length ? 100 : 80,
+        security: latestHealthScan.security_health?.uac_enabled ? 100 : 80,
+        details: {
+          performance: latestHealthScan.performance_metrics || {},
+          disk: latestHealthScan.disk_health || [],
+          memory: latestHealthScan.memory_health || {},
+          network: latestHealthScan.network_health || {},
+          services: latestHealthScan.service_health || [],
+          security: latestHealthScan.security_health || {}
+        }
+      }
+    } else {
+      // Fallback to calculated score from health checks
+      const latestHealthCheck = healthChecks?.[0]
+      healthScore = latestHealthCheck ? calculateHealthScore(latestHealthCheck) : {
+        overall: 100,
+        performance: 100,
+        disk: 100,
+        memory: 100,
+        network: 100,
+        services: 100,
+        security: 100,
+        details: {
+          performance: {},
+          disk: {},
+          memory: {},
+          network: {},
+          services: {},
+          security: {}
+        }
       }
     }
 
     return {
       device_id: deviceId,
       last_heartbeat: heartbeats?.[0],
-      last_health_check: latestHealthCheck,
+      last_health_check: healthChecks?.[0],
+      latest_health_scan: latestHealthScan,
       health_score: healthScore,
       status,
       uptime_percentage: uptimePercentage,

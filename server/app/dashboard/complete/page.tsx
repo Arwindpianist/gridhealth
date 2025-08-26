@@ -276,12 +276,31 @@ export default async function CompleteDashboardPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Health Score
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Last Scan
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-dark-800 divide-y divide-dark-700">
                   {devices.map((device) => {
-                    const deviceHealth = healthMetrics.find(h => h.device_id === device.device_id)
-                    const healthScore = deviceHealth ? calculateHealthScore(deviceHealth) : null
+                    // Find the latest comprehensive health scan for this device
+                    const latestHealthScan = healthMetrics.find(h => 
+                      h.device_id === device.device_id && 
+                      h.metric_type === 'health_scan'
+                    )
+                    
+                    const healthScore = latestHealthScan ? {
+                      overall: latestHealthScan.value || 100,
+                      performance: latestHealthScan.performance_metrics?.cpu_usage_percent ? 
+                        Math.max(0, 100 - (latestHealthScan.performance_metrics.cpu_usage_percent + latestHealthScan.performance_metrics.memory_usage_percent) / 2) : 100,
+                      disk: latestHealthScan.disk_health?.[0]?.free_space_percent ? 
+                        Math.max(0, Math.min(100, latestHealthScan.disk_health[0].free_space_percent)) : 100,
+                      memory: latestHealthScan.memory_health?.memory_usage_percent ? 
+                        Math.max(0, 100 - latestHealthScan.memory_health.memory_usage_percent) : 100,
+                      network: latestHealthScan.network_health?.internet_connectivity ? 100 : 80,
+                      services: latestHealthScan.service_health?.filter((s: any) => s.status === 'Running').length === latestHealthScan.service_health?.length ? 100 : 80,
+                      security: latestHealthScan.security_health?.uac_enabled ? 100 : 80
+                    } : null
                     
                     return (
                       <tr key={device.device_id} className="hover:bg-dark-700 transition-colors">
@@ -339,10 +358,20 @@ export default async function CompleteDashboardPage() {
                                 healthScore.overall >= 60 ? 'bg-yellow-500' : 'bg-red-500'
                               }`}></div>
                               <span className="text-sm text-white">{healthScore.overall}/100</span>
+                              {latestHealthScan && (
+                                <div className="ml-2 text-xs text-dark-400">
+                                      <div>P: {healthScore.performance} D: {healthScore.disk}</div>
+                                      <div>M: {healthScore.memory} N: {healthScore.network}</div>
+                                      <div>S: {healthScore.services} Sec: {healthScore.security}</div>
+                                    </div>
+                              )}
                             </div>
                           ) : (
                             <span className="text-sm text-dark-400">No data</span>
                           )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-dark-300">
+                          {latestHealthScan ? new Date(latestHealthScan.timestamp).toLocaleString() : 'Never'}
                         </td>
                       </tr>
                     )

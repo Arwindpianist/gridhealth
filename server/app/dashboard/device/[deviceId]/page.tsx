@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabaseAdmin } from '../../../../lib/supabase'
 import { getDeviceHealthData } from '../../../../lib/healthMetrics'
 import { generateDeviceReportCSV } from '../../../../lib/reportGenerator'
+import HealthMetricsDisplay from '../../../components/HealthMetricsDisplay'
 
 interface DevicePageProps {
   params: {
@@ -237,6 +238,272 @@ export default async function DevicePage({ params }: DevicePageProps) {
             ))}
           </div>
         </div>
+
+        {/* Detailed System Information */}
+        {healthData.latest_health_scan && (
+          <>
+            {/* Performance Metrics */}
+            {healthData.latest_health_scan.performance_metrics && (
+              <div className="bg-dark-800 rounded-lg border border-dark-700 p-6 mb-8">
+                <h2 className="text-xl font-semibold text-white mb-4">Performance Metrics</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.performance_metrics.cpu_usage_percent || 0}%
+                    </div>
+                    <div className="text-sm text-gray-400">CPU Usage</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.performance_metrics.memory_usage_percent || 0}%
+                    </div>
+                    <div className="text-sm text-gray-400">Memory Usage</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.performance_metrics.process_count || 0}
+                    </div>
+                    <div className="text-sm text-gray-400">Processes</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.performance_metrics.thread_count || 0}
+                    </div>
+                    <div className="text-sm text-gray-400">Threads</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Disk Health */}
+            {healthData.latest_health_scan.disk_health && healthData.latest_health_scan.disk_health.length > 0 && (
+              <div className="bg-dark-800 rounded-lg border border-dark-700 p-6 mb-8">
+                <h2 className="text-xl font-semibold text-white mb-4">Disk Health</h2>
+                <div className="space-y-4">
+                  {healthData.latest_health_scan.disk_health.map((disk: any, index: number) => (
+                    <div key={index} className="p-4 bg-dark-700 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-white font-medium">Drive {disk.drive_letter}</span>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          disk.health_status === 'Healthy' ? 'bg-green-600 text-white' :
+                          disk.health_status === 'Warning' ? 'bg-yellow-600 text-white' : 'bg-red-600 text-white'
+                        }`}>
+                          {disk.health_status}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-400">Free Space:</span>
+                          <div className="text-white font-medium">
+                            {((disk.free_space_bytes / (1024 * 1024 * 1024))).toFixed(1)} GB
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Free %:</span>
+                          <div className="text-white font-medium">{disk.free_space_percent?.toFixed(1)}%</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Total:</span>
+                          <div className="text-white font-medium">
+                            {((disk.total_size_bytes / (1024 * 1024 * 1024))).toFixed(1)} GB
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-full bg-dark-600 rounded-full h-2 mt-2">
+                        <div 
+                          className="h-2 bg-blue-500 rounded-full"
+                          style={{ width: `${100 - (disk.free_space_percent || 0)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Memory Health */}
+            {healthData.latest_health_scan.memory_health && (
+              <div className="bg-dark-800 rounded-lg border border-dark-700 p-6 mb-8">
+                <h2 className="text-xl font-semibold text-white mb-4">Memory Health</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.memory_health.memory_usage_percent?.toFixed(1) || 0}%
+                    </div>
+                    <div className="text-sm text-gray-400">Usage</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {((healthData.latest_health_scan.memory_health.available_physical_memory_bytes / (1024 * 1024 * 1024))).toFixed(1)} GB
+                    </div>
+                    <div className="text-sm text-gray-400">Available</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {((healthData.latest_health_scan.memory_health.total_physical_memory_bytes / (1024 * 1024 * 1024))).toFixed(1)} GB
+                    </div>
+                    <div className="text-sm text-gray-400">Total</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.memory_health.memory_pressure_level || 'Normal'}
+                    </div>
+                    <div className="text-sm text-gray-400">Pressure</div>
+                  </div>
+                </div>
+                <div className="w-full bg-dark-700 rounded-full h-3 mt-4">
+                  <div 
+                    className="h-3 bg-blue-500 rounded-full"
+                    style={{ width: `${healthData.latest_health_scan.memory_health.memory_usage_percent || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {/* Network Health */}
+            {healthData.latest_health_scan.network_health && (
+              <div className="bg-dark-800 rounded-lg border border-dark-700 p-6 mb-8">
+                <h2 className="text-xl font-semibold text-white mb-4">Network Health</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.network_health.active_connections || 0}
+                    </div>
+                    <div className="text-sm text-gray-400">Active Connections</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.network_health.network_adapter_count || 0}
+                    </div>
+                    <div className="text-sm text-gray-400">Network Adapters</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.network_health.internet_connectivity ? '✅' : '❌'}
+                    </div>
+                    <div className="text-sm text-gray-400">Internet</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.network_health.dns_servers?.length || 0}
+                    </div>
+                    <div className="text-sm text-gray-400">DNS Servers</div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {healthData.latest_health_scan.network_health.network_interfaces?.map((ni: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-dark-700 rounded-lg">
+                      <div>
+                        <span className="text-white font-medium">{ni.name}</span>
+                        <div className="text-sm text-gray-400">
+                          {ni.ip_addresses?.join(', ') || 'No IP'}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          ni.is_connected ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                        }`}>
+                          {ni.is_connected ? 'Connected' : 'Disconnected'}
+                        </span>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {ni.speed_mbps} Mbps
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Service Health */}
+            {healthData.latest_health_scan.service_health && healthData.latest_health_scan.service_health.length > 0 && (
+              <div className="bg-dark-800 rounded-lg border border-dark-700 p-6 mb-8">
+                <h2 className="text-xl font-semibold text-white mb-4">Service Health</h2>
+                <div className="space-y-2">
+                  {healthData.latest_health_scan.service_health.map((service: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-dark-700 rounded-lg">
+                      <div>
+                        <span className="text-white font-medium">{service.display_name}</span>
+                        <div className="text-sm text-gray-400">{service.service_name}</div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          service.status === 'Running' ? 'bg-green-600 text-white' :
+                          service.status === 'Stopped' ? 'bg-red-600 text-white' : 'bg-yellow-600 text-white'
+                        }`}>
+                          {service.status}
+                        </span>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {service.startup_type}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Security Health */}
+            {healthData.latest_health_scan.security_health && (
+              <div className="bg-dark-800 rounded-lg border border-dark-700 p-6 mb-8">
+                <h2 className="text-xl font-semibold text-white mb-4">Security Health</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.security_health.uac_enabled ? '✅' : '❌'}
+                    </div>
+                    <div className="text-sm text-gray-400">UAC Enabled</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.security_health.security_updates_available || 0}
+                    </div>
+                    <div className="text-sm text-gray-400">Updates Available</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.security_health.antivirus_status || 'Unknown'}
+                    </div>
+                    <div className="text-sm text-gray-400">Antivirus</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Agent Information */}
+            {healthData.latest_health_scan.agent_info && (
+              <div className="bg-dark-800 rounded-lg border border-dark-700 p-6 mb-8">
+                <h2 className="text-xl font-semibold text-white mb-4">Agent Information</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.agent_info.version || 'Unknown'}
+                    </div>
+                    <div className="text-sm text-gray-400">Version</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.agent_info.uptime_seconds || 0}s
+                    </div>
+                    <div className="text-sm text-gray-400">Uptime</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.agent_info.total_scans_performed || 0}
+                    </div>
+                    <div className="text-sm text-gray-400">Scans Performed</div>
+                  </div>
+                  <div className="text-center p-4 bg-dark-700 rounded-lg">
+                    <div className="text-2xl font-bold text-white">
+                      {healthData.latest_health_scan.agent_info.last_successful_scan ? '✅' : '❌'}
+                    </div>
+                    <div className="text-sm text-gray-400">Last Scan</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Recent Health Data */}
         {healthMetrics && healthMetrics.length > 0 && (
