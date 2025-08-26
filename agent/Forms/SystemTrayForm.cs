@@ -9,6 +9,9 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Management;
+using System.Collections.Generic; // Added for List
+using System.Net.NetworkInformation; // Added for network interface information
+using System.Net.Sockets; // Added for AddressFamily enum
 
 namespace GridHealth.Agent.Forms
 {
@@ -364,20 +367,20 @@ namespace GridHealth.Agent.Forms
                 _heartbeatCount++;
 
                 // Get or generate a consistent device ID
-                var deviceId = _config.DeviceId ?? GetStableDeviceId();
+                var deviceId = _config.DeviceId ?? GetStableDeviceId(); // Use stable device ID
+
+                // Collect comprehensive system information for heartbeat
+                var systemInfo = GetComprehensiveSystemInfo();
 
                 var heartbeatData = new
                 {
-                    device_id = deviceId,
+                    device_id = deviceId, // Use the stable device ID
                     license_key = _config.LicenseKey,
                     timestamp = DateTime.UtcNow,
                     type = "heartbeat",
                     status = "online",
-                    system_info = new
-                    {
-                        hostname = Environment.MachineName,
-                        machine_name = Environment.MachineName
-                    }
+                    system_info = systemInfo,
+                    network_health = GetNetworkHealthInfo()
                 };
 
                 using (var httpClient = new HttpClient())
@@ -388,19 +391,19 @@ namespace GridHealth.Agent.Forms
                     var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
                     
                     // Use the correct health API endpoint
-                    var healthEndpoint = $"{_config.ApiEndpoint.TrimEnd('/')}/api/health";
+                    var healthEndpoint = $"{_config.ApiEndpoint.TrimEnd('/')}/api/health"; // Corrected endpoint
                     var response = await httpClient.PostAsync(healthEndpoint, content);
                     
                     if (response.IsSuccessStatusCode)
                     {
-                        // Update status to show device is online
+                        // Update status to show successful connection
                         var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
                         if (statusItem != null)
                         {
-                            statusItem.Text = $"Status: Online - Last heartbeat: {DateTime.Now:HH:mm}";
+                            statusItem.Text = $"Status: Connected - Heartbeat #{_heartbeatCount}";
                         }
 
-                        // Validate license every 10 heartbeats (every 20 minutes)
+                        // Periodically validate license (every 10 heartbeats)
                         if (_heartbeatCount % 10 == 0)
                         {
                             await ValidateLicensePeriodically();
@@ -419,13 +422,13 @@ namespace GridHealth.Agent.Forms
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"❌ Error sending heartbeat: {ex.Message}");
                 // Update status to show error
                 var statusItem = trayMenu.Items[0] as ToolStripMenuItem;
                 if (statusItem != null)
                 {
-                    statusItem.Text = $"Status: Network Error - {DateTime.Now:HH:mm}";
+                    statusItem.Text = $"Status: Error - {ex.Message}";
                 }
-                Console.WriteLine($"Heartbeat error: {ex.Message}");
             }
         }
 
@@ -485,11 +488,12 @@ namespace GridHealth.Agent.Forms
             }
         }
 
+        // Added GetStableDeviceId method
         private string GetStableDeviceId()
         {
             try
             {
-                // Try to get UUID from WMI (most stable)
+                // First try to get the UUID from WMI (most stable)
                 using var searcher = new ManagementObjectSearcher("SELECT UUID FROM Win32_ComputerSystemProduct");
                 foreach (ManagementObject obj in searcher.Get())
                 {
@@ -502,7 +506,7 @@ namespace GridHealth.Agent.Forms
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Could not get device UUID: {ex.Message}");
+                Console.WriteLine($"Warning: Could not get device UUID from WMI: {ex.Message}");
             }
 
             try
@@ -520,12 +524,158 @@ namespace GridHealth.Agent.Forms
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Could not get BIOS serial number: {ex.Message}");
+                Console.WriteLine($"Warning: Could not get BIOS serial number: {ex.Message}");
             }
 
-            // Final fallback: Use machine name hash
+            try
+            {
+                // Fallback: Try to get MAC address of primary network adapter
+                var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+                foreach (var ni in networkInterfaces)
+                {
+                    if (ni.OperationalStatus == OperationalStatus.Up &&
+                        ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                    {
+                        var macAddress = ni.GetPhysicalAddress().ToString();
+                        if (!string.IsNullOrEmpty(macAddress))
+                        {
+                            return $"MAC-{macAddress}";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not get MAC address: {ex.Message}");
+            }
+
+            // Final fallback: Use machine name (less stable but better than random)
             var machineName = Environment.MachineName;
-            return $"HOST-{Math.Abs(machineName.GetHashCode()):X8}";
+            if (!string.IsNullOrEmpty(machineName))
+            {
+                return $"HOST-{machineName}";
+            }
+
+            // Last resort: Generate a stable ID based on machine name hash
+            return $"HASH-{Math.Abs(machineName.GetHashCode()):X8}";
+        }
+
+        // Helper method to get comprehensive system information
+        private object GetComprehensiveSystemInfo()
+        {
+            try
+            {
+                var osInfo = Environment.OSVersion;
+                var machineName = Environment.MachineName;
+                var processorCount = Environment.ProcessorCount;
+                var workingSet = Environment.WorkingSet;
+                var systemPageSize = Environment.SystemPageSize;
+
+                // Get more detailed OS information from WMI
+                string osName = "Windows";
+                string osVersion = osInfo.Version.ToString();
+                string osDescription = "";
+
+                try
+                {
+                    using var searcher = new ManagementObjectSearcher("SELECT Caption, Version FROM Win32_OperatingSystem");
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        osName = obj["Caption"]?.ToString() ?? "Windows";
+                        osVersion = obj["Version"]?.ToString() ?? osInfo.Version.ToString();
+                        osDescription = obj["Caption"]?.ToString() ?? "";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Could not get detailed OS info from WMI: {ex.Message}");
+                }
+
+                return new
+                {
+                    hostname = machineName,
+                    machine_name = machineName,
+                    os_name = osName,
+                    os_version = osVersion,
+                    os_description = osDescription,
+                    os_platform = osInfo.Platform.ToString(),
+                    processor_count = processorCount,
+                    working_set_mb = workingSet / (1024 * 1024),
+                    system_page_size = systemPageSize,
+                    user_domain_name = Environment.UserDomainName,
+                    user_name = Environment.UserName
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not get comprehensive system info: {ex.Message}");
+                // Fallback to basic info
+                return new
+                {
+                    hostname = Environment.MachineName,
+                    machine_name = Environment.MachineName,
+                    os_name = "Windows",
+                    os_version = Environment.OSVersion.Version.ToString()
+                };
+            }
+        }
+
+        // Helper method to get network health information
+        private object GetNetworkHealthInfo()
+        {
+            try
+            {
+                var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+                var interfaces = new List<object>();
+
+                foreach (var ni in networkInterfaces)
+                {
+                    if (ni.OperationalStatus == OperationalStatus.Up &&
+                        ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                    {
+                        var properties = ni.GetIPProperties();
+                        var ipAddresses = new List<string>();
+                        var macAddress = ni.GetPhysicalAddress().ToString();
+
+                        foreach (var addr in properties.UnicastAddresses)
+                        {
+                            if (addr.Address.AddressFamily == AddressFamily.InterNetwork) // IPv4 only
+                            {
+                                ipAddresses.Add(addr.Address.ToString());
+                            }
+                        }
+
+                        interfaces.Add(new
+                        {
+                            name = ni.Name,
+                            description = ni.Description,
+                            type = ni.NetworkInterfaceType.ToString(),
+                            speed = ni.Speed,
+                            mac_address = macAddress,
+                            ip_addresses = ipAddresses,
+                            operational_status = ni.OperationalStatus.ToString(),
+                            is_up = ni.OperationalStatus == OperationalStatus.Up
+                        });
+                    }
+                }
+
+                return new
+                {
+                    network_interfaces = interfaces,
+                    total_interfaces = networkInterfaces.Length,
+                    active_interfaces = interfaces.Count
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not get network health info: {ex.Message}");
+                return new
+                {
+                    network_interfaces = new List<object>(),
+                    total_interfaces = 0,
+                    active_interfaces = 0
+                };
+            }
         }
 
         private void ViewLogs()

@@ -148,6 +148,9 @@ export async function POST(request: Request) {
     if (body.type === "heartbeat") {
       console.log('💓 Heartbeat received from device:', deviceId);
       
+      // Extract system information from heartbeat and update device details
+      await updateDeviceFromHeartbeat(deviceId, body);
+      
       // Store heartbeat data with retention policy in health_metrics table
       await storeHeartbeatWithRetention(deviceId, body);
       
@@ -305,5 +308,71 @@ async function storeHeartbeatWithRetention(deviceId: string, heartbeatData: any)
     console.log('💓 Heartbeat stored successfully with retention policy');
   } catch (error) {
     console.error('❌ Error in heartbeat storage:', error);
+  }
+}
+
+// Helper function to update device information from heartbeat data
+async function updateDeviceFromHeartbeat(deviceId: string, heartbeatData: any) {
+  try {
+    console.log('🔧 Updating device information from heartbeat data...');
+    
+    // Extract system information from heartbeat
+    const systemInfo = heartbeatData.system_info || {};
+    const networkHealth = heartbeatData.network_health || {};
+    
+    // Get network interface information
+    let macAddress = null;
+    let ipAddress = null;
+    
+    if (networkHealth.network_interfaces && networkHealth.network_interfaces.length > 0) {
+      const primaryInterface = networkHealth.network_interfaces[0];
+      macAddress = primaryInterface.mac_address || null;
+      if (primaryInterface.ip_addresses && primaryInterface.ip_addresses.length > 0) {
+        ipAddress = primaryInterface.ip_addresses[0];
+      }
+    }
+    
+    // Prepare device update data
+    const deviceUpdateData = {
+      device_id: deviceId,
+      license_key: heartbeatData.license_key,
+      device_name: systemInfo.hostname || systemInfo.machine_name || 'Unknown Device',
+      device_type: 'workstation',
+      os_name: systemInfo.os_name || 'Windows', // Default to Windows for now
+      os_version: systemInfo.os_version || 'Unknown Version',
+      hostname: systemInfo.hostname || systemInfo.machine_name || 'Unknown Hostname',
+      mac_address: macAddress,
+      ip_address: ipAddress,
+      is_active: true,
+      last_seen: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    console.log('📝 Device update data:', {
+      device_id: deviceId,
+      device_name: deviceUpdateData.device_name,
+      os_name: deviceUpdateData.os_name,
+      os_version: deviceUpdateData.os_version,
+      hostname: deviceUpdateData.hostname,
+      mac_address: deviceUpdateData.mac_address,
+      ip_address: deviceUpdateData.ip_address
+    });
+
+    // Update device information using upsert
+    const { error: deviceUpsertError } = await supabase
+      .from('devices')
+      .upsert([deviceUpdateData], {
+        onConflict: 'device_id',
+        ignoreDuplicates: false
+      });
+
+    if (deviceUpsertError) {
+      console.error('❌ Failed to update device information:', deviceUpsertError);
+    } else {
+      console.log('✅ Device information updated successfully from heartbeat');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error updating device from heartbeat:', error);
   }
 } 
