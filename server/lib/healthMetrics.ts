@@ -74,19 +74,51 @@ export function calculateHealthScore(healthData: any): HealthScore {
     // Calculate disk score
     let diskScore = 100
     if (Array.isArray(disk) && disk.length > 0) {
-      const diskUsage = disk.reduce((sum: number, d: any) => {
+      // Find the disk with the highest usage (worst case scenario)
+      const worstDiskUsage = disk.reduce((maxUsage: number, d: any) => {
         if (d.usage_percent) {
-          return sum + d.usage_percent
+          return Math.max(maxUsage, d.usage_percent)
         }
-        return sum
-      }, 0) / disk.length
-      diskScore = Math.max(0, 100 - diskUsage)
+        return maxUsage
+      }, 0)
+      
+      // Calculate score based on worst disk usage
+      if (worstDiskUsage >= 90) {
+        diskScore = 0  // Critical: 90%+ usage
+      } else if (worstDiskUsage >= 80) {
+        diskScore = 20  // Warning: 80-89% usage
+      } else if (worstDiskUsage >= 70) {
+        diskScore = 40  // Caution: 70-79% usage
+      } else if (worstDiskUsage >= 60) {
+        diskScore = 60  // Moderate: 60-69% usage
+      } else if (worstDiskUsage >= 50) {
+        diskScore = 80  // Good: 50-59% usage
+      } else {
+        diskScore = 100  // Excellent: <50% usage
+      }
     }
 
     // Calculate memory score
     let memoryScore = 100
     if (memory.usage_percent) {
-      memoryScore = Math.max(0, 100 - memory.usage_percent)
+      const memoryUsage = memory.usage_percent
+      
+      // Calculate score based on memory usage (lower usage = better score)
+      if (memoryUsage <= 20) {
+        memoryScore = 100      // Excellent: ≤20% usage
+      } else if (memoryUsage <= 40) {
+        memoryScore = 90       // Very Good: 21-40% usage
+      } else if (memoryUsage <= 60) {
+        memoryScore = 80       // Good: 41-60% usage
+      } else if (memoryUsage <= 75) {
+        memoryScore = 60       // Moderate: 61-75% usage
+      } else if (memoryUsage <= 85) {
+        memoryScore = 40       // Warning: 76-85% usage
+      } else if (memoryUsage <= 95) {
+        memoryScore = 20       // Critical: 86-95% usage
+      } else {
+        memoryScore = 0        // Emergency: >95% usage
+      }
     }
 
     // Calculate network score
@@ -239,10 +271,34 @@ export async function getDeviceHealthData(deviceId: string): Promise<DeviceHealt
         overall: Math.round(latestHealthScan.value || 100),
         performance: latestHealthScan.performance_metrics?.cpu_usage_percent ? 
           Math.round(Math.max(0, 100 - (latestHealthScan.performance_metrics.cpu_usage_percent + latestHealthScan.performance_metrics.memory_usage_percent) / 2)) : 100,
-        disk: latestHealthScan.disk_health?.[0]?.free_space_percent ? 
-          Math.round(Math.max(0, Math.min(100, latestHealthScan.disk_health[0].free_space_percent))) : 100,
-        memory: latestHealthScan.memory_health?.memory_usage_percent ? 
-          Math.round(Math.max(0, 100 - latestHealthScan.memory_health.memory_usage_percent)) : 100,
+        disk: (() => {
+          if (!latestHealthScan.disk_health || latestHealthScan.disk_health.length === 0) return 100
+          
+          // Find the disk with the lowest free space (worst case)
+          const worstDiskFreeSpace = Math.min(...latestHealthScan.disk_health.map((d: any) => d.free_space_percent || 100))
+          
+          // Calculate score based on worst disk free space
+          if (worstDiskFreeSpace <= 10) return 0      // Critical: ≤10% free
+          if (worstDiskFreeSpace <= 20) return 20     // Warning: 11-20% free
+          if (worstDiskFreeSpace <= 30) return 40     // Caution: 21-30% free
+          if (worstDiskFreeSpace <= 40) return 60     // Moderate: 31-40% free
+          if (worstDiskFreeSpace <= 50) return 80     // Good: 41-50% free
+          return 100                                   // Excellent: >50% free
+        })(),
+        memory: (() => {
+          if (!latestHealthScan.memory_health?.memory_usage_percent) return 100
+          
+          const memoryUsage = latestHealthScan.memory_health.memory_usage_percent
+          
+          // Calculate score based on memory usage (lower usage = better score)
+          if (memoryUsage <= 20) return 100      // Excellent: ≤20% usage
+          if (memoryUsage <= 40) return 90       // Very Good: 21-40% usage
+          if (memoryUsage <= 60) return 80       // Good: 41-60% usage
+          if (memoryUsage <= 75) return 60       // Moderate: 61-75% usage
+          if (memoryUsage <= 85) return 40       // Warning: 76-85% usage
+          if (memoryUsage <= 95) return 20       // Critical: 86-95% usage
+          return 0                                // Emergency: >95% usage
+        })(),
         network: latestHealthScan.network_health?.internet_connectivity ? 100 : 80,
         services: latestHealthScan.service_health?.filter((s: any) => s.status === 'Running').length === latestHealthScan.service_health?.length ? 100 : 80,
         security: latestHealthScan.security_health?.uac_enabled ? 100 : 80,
