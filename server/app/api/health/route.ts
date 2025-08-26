@@ -115,7 +115,7 @@ async function storeComprehensiveHealthData(deviceId: string, healthData: any) {
     await supabaseAdmin.from('health_metrics').insert([{
       device_id: deviceId,
       metric_type: 'health_scan',
-      value: health_score?.overall || 0,
+      value: healthData.value || health_score?.overall || 0,
       unit: 'score',
       timestamp: new Date().toISOString(),
       license_key: healthData.license_key,
@@ -166,7 +166,7 @@ async function storeComprehensiveHealthData(deviceId: string, healthData: any) {
       await supabaseAdmin.from('health_metrics').insert([{
         device_id: deviceId,
         metric_type: 'performance',
-        value: health_score?.performance || 100,
+        value: healthData.raw_data?.health_score?.performance || health_score?.performance || 100,
         unit: 'score',
         timestamp: new Date().toISOString(),
         license_key: healthData.license_key,
@@ -188,7 +188,7 @@ async function storeComprehensiveHealthData(deviceId: string, healthData: any) {
         await supabaseAdmin.from('health_metrics').insert([{
           device_id: deviceId,
           metric_type: 'disk_health',
-          value: health_score?.disk || 100,
+          value: healthData.raw_data?.health_score?.disk || health_score?.disk || 100,
           unit: 'score',
           timestamp: new Date().toISOString(),
           license_key: healthData.license_key,
@@ -210,7 +210,7 @@ async function storeComprehensiveHealthData(deviceId: string, healthData: any) {
       await supabaseAdmin.from('health_metrics').insert([{
         device_id: deviceId,
         metric_type: 'memory_health',
-        value: health_score?.memory || 100,
+        value: healthData.raw_data?.health_score?.memory || health_score?.memory || 100,
         unit: 'score',
         timestamp: new Date().toISOString(),
         license_key: healthData.license_key,
@@ -231,7 +231,7 @@ async function storeComprehensiveHealthData(deviceId: string, healthData: any) {
       await supabaseAdmin.from('health_metrics').insert([{
         device_id: deviceId,
         metric_type: 'network_health',
-        value: health_score?.network || 100,
+        value: healthData.raw_data?.health_score?.network || health_score?.network || 100,
         unit: 'score',
         timestamp: new Date().toISOString(),
         license_key: healthData.license_key,
@@ -253,7 +253,7 @@ async function storeComprehensiveHealthData(deviceId: string, healthData: any) {
         await supabaseAdmin.from('health_metrics').insert([{
           device_id: deviceId,
           metric_type: 'service_health',
-          value: health_score?.services || 100,
+          value: healthData.raw_data?.health_score?.services || health_score?.services || 100,
           unit: 'score',
           timestamp: new Date().toISOString(),
           license_key: healthData.license_key,
@@ -275,7 +275,7 @@ async function storeComprehensiveHealthData(deviceId: string, healthData: any) {
       await supabaseAdmin.from('health_metrics').insert([{
         device_id: deviceId,
         metric_type: 'security_health',
-        value: health_score?.security || 100,
+        value: healthData.raw_data?.health_score?.security || health_score?.security || 100,
         unit: 'score',
         timestamp: new Date().toISOString(),
         license_key: healthData.license_key,
