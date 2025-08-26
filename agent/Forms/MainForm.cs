@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
+using System.Management;
 
 namespace GridHealth.Agent.Forms
 {
@@ -190,7 +191,7 @@ namespace GridHealth.Agent.Forms
                 {
                     LicenseKey = "",
                     ScanFrequency = ScanFrequency.Daily,
-                    ApiEndpoint = "https://gridhealth.arwindpianist.store/api/health",
+                    ApiEndpoint = "https://gridhealth.arwindpianist.store",
                     DeviceId = GenerateDeviceId()
                 };
 
@@ -362,16 +363,20 @@ namespace GridHealth.Agent.Forms
         {
             try
             {
+                // Get or generate a consistent device ID
+                var deviceId = _config.DeviceId ?? GetStableDeviceId();
+                
                 // Create initial health data to register the device
                 var healthData = new HealthData
                 {
-                    DeviceId = _config.DeviceId,
+                    DeviceId = deviceId,
                     LicenseKey = _config.LicenseKey,
                     Timestamp = DateTime.UtcNow,
                     SystemInfo = new SystemInfo
                     {
                         Hostname = Environment.MachineName,
-                        OsName = Environment.OSVersion.ToString(),
+                        MachineName = Environment.MachineName,
+                        OsName = Environment.OSVersion.Platform.ToString(),
                         OsVersion = Environment.OSVersion.Version.ToString(),
                         ProcessorCount = Environment.ProcessorCount
                     },
@@ -393,12 +398,21 @@ namespace GridHealth.Agent.Forms
                     var json = JsonSerializer.Serialize(healthData);
                     var content = new StringContent(json, Encoding.UTF8, "application/json");
                     
-                    var response = await httpClient.PostAsync(_config.ApiEndpoint, content);
+                    // Use the correct health API endpoint
+                    var healthEndpoint = $"{_config.ApiEndpoint.TrimEnd('/')}/api/health";
+                    var response = await httpClient.PostAsync(healthEndpoint, content);
                     
                     if (response.IsSuccessStatusCode)
                     {
                         // Device registered successfully
                         Console.WriteLine("Device registered successfully with GridHealth API");
+                        
+                        // Update configuration with the device ID
+                        if (_config.DeviceId != deviceId)
+                        {
+                            _config.DeviceId = deviceId;
+                            SaveConfiguration();
+                        }
                     }
                     else
                     {
@@ -411,6 +425,49 @@ namespace GridHealth.Agent.Forms
                 Console.WriteLine($"Error registering device: {ex.Message}");
                 // Don't fail the installation for this - device will register on first health scan
             }
+        }
+
+        private string GetStableDeviceId()
+        {
+            try
+            {
+                // Try to get UUID from WMI (most stable)
+                using var searcher = new ManagementObjectSearcher("SELECT UUID FROM Win32_ComputerSystemProduct");
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    var uuid = obj["UUID"]?.ToString();
+                    if (!string.IsNullOrEmpty(uuid) && uuid != "00000000-0000-0000-0000-000000000000")
+                    {
+                        return uuid;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not get device UUID: {ex.Message}");
+            }
+
+            try
+            {
+                // Fallback: Try to get Serial Number from BIOS
+                using var searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_BIOS");
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    var serial = obj["SerialNumber"]?.ToString();
+                    if (!string.IsNullOrEmpty(serial) && serial != "0" && serial != "To be filled by O.E.M.")
+                    {
+                        return $"BIOS-{serial}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not get BIOS serial number: {ex.Message}");
+            }
+
+            // Final fallback: Use machine name hash
+            var machineName = Environment.MachineName;
+            return $"HOST-{Math.Abs(machineName.GetHashCode()):X8}";
         }
 
         private void StartBackgroundService()

@@ -10,11 +10,19 @@ namespace GridHealth.Agent.Services
     public class LicenseValidationService : ILicenseValidationService
     {
         private readonly HttpClient _httpClient;
+        private readonly JsonSerializerOptions _jsonOptions;
 
         public LicenseValidationService()
         {
             _httpClient = new HttpClient();
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
+            
+            // Configure JSON deserialization to be case-insensitive
+            _jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
         }
 
         public async Task<LicenseValidationResult> ValidateLicenseAsync(string licenseKey, string apiEndpoint)
@@ -41,15 +49,38 @@ namespace GridHealth.Agent.Services
                 var baseUrl = apiEndpoint.TrimEnd('/');
                 var response = await _httpClient.PostAsync($"{baseUrl}/api/licenses/validate", content);
 
+                Console.WriteLine($"🔍 License validation response status: {response.StatusCode}");
+                Console.WriteLine($"🔍 License validation response headers: {string.Join(", ", response.Headers)}");
+
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<LicenseValidationResult>(responseContent);
-
-                    if (result != null)
+                    Console.WriteLine($"🔍 License validation response content: {responseContent}");
+                    
+                    try
                     {
-                        return result;
+                        var result = JsonSerializer.Deserialize<LicenseValidationResult>(responseContent, _jsonOptions);
+                        Console.WriteLine($"🔍 Deserialized result: IsValid={result?.IsValid}, Message={result?.Message}, OrganizationName={result?.OrganizationName}, DeviceLimit={result?.DeviceLimit}, LicenseType={result?.LicenseType}");
+
+                        if (result != null)
+                        {
+                            return result;
+                        }
+                        else
+                        {
+                            Console.WriteLine("❌ Deserialized result is null");
+                        }
                     }
+                    catch (JsonException ex)
+                    {
+                        Console.WriteLine($"❌ JSON deserialization error: {ex.Message}");
+                        Console.WriteLine($"❌ Response content that failed to deserialize: {responseContent}");
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"❌ License validation failed with status {response.StatusCode}: {errorContent}");
                 }
 
                 // If we get here, the license is invalid
@@ -64,6 +95,7 @@ namespace GridHealth.Agent.Services
             }
             catch (HttpRequestException ex)
             {
+                Console.WriteLine($"❌ HttpRequestException: {ex.Message}");
                 return new LicenseValidationResult
                 {
                     IsValid = false,
@@ -75,6 +107,7 @@ namespace GridHealth.Agent.Services
             }
             catch (TaskCanceledException)
             {
+                Console.WriteLine("❌ Request timed out");
                 return new LicenseValidationResult
                 {
                     IsValid = false,
@@ -86,6 +119,7 @@ namespace GridHealth.Agent.Services
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"❌ Unexpected error: {ex.Message}");
                 return new LicenseValidationResult
                 {
                     IsValid = false,

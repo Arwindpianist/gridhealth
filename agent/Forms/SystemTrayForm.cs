@@ -8,6 +8,7 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Management;
 
 namespace GridHealth.Agent.Forms
 {
@@ -362,21 +363,23 @@ namespace GridHealth.Agent.Forms
 
                 _heartbeatCount++;
 
-                // Create minimal heartbeat data (just to show device is online)
+                // Get or generate a consistent device ID
+                var deviceId = _config.DeviceId ?? GetStableDeviceId();
+
                 var heartbeatData = new
                 {
-                    device_id = _config.DeviceId,
+                    device_id = deviceId,
                     license_key = _config.LicenseKey,
                     timestamp = DateTime.UtcNow,
-                    heartbeat = true,
+                    type = "heartbeat",
+                    status = "online",
                     system_info = new
                     {
                         hostname = Environment.MachineName,
-                        os_name = Environment.OSVersion.ToString()
+                        machine_name = Environment.MachineName
                     }
                 };
 
-                // Send heartbeat to API
                 using (var httpClient = new HttpClient())
                 {
                     httpClient.DefaultRequestHeaders.Add("X-License-Key", _config.LicenseKey);
@@ -384,7 +387,9 @@ namespace GridHealth.Agent.Forms
                     var json = System.Text.Json.JsonSerializer.Serialize(heartbeatData);
                     var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
                     
-                    var response = await httpClient.PostAsync(_config.ApiEndpoint, content);
+                    // Use the correct health API endpoint
+                    var healthEndpoint = $"{_config.ApiEndpoint.TrimEnd('/')}/api/health";
+                    var response = await httpClient.PostAsync(healthEndpoint, content);
                     
                     if (response.IsSuccessStatusCode)
                     {
@@ -478,6 +483,49 @@ namespace GridHealth.Agent.Forms
                 // Log error but don't show to user
                 Console.WriteLine($"Health scan error: {ex.Message}");
             }
+        }
+
+        private string GetStableDeviceId()
+        {
+            try
+            {
+                // Try to get UUID from WMI (most stable)
+                using var searcher = new ManagementObjectSearcher("SELECT UUID FROM Win32_ComputerSystemProduct");
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    var uuid = obj["UUID"]?.ToString();
+                    if (!string.IsNullOrEmpty(uuid) && uuid != "00000000-0000-0000-0000-000000000000")
+                    {
+                        return uuid;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not get device UUID: {ex.Message}");
+            }
+
+            try
+            {
+                // Fallback: Try to get Serial Number from BIOS
+                using var searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_BIOS");
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    var serial = obj["SerialNumber"]?.ToString();
+                    if (!string.IsNullOrEmpty(serial) && serial != "0" && serial != "To be filled by O.E.M.")
+                    {
+                        return $"BIOS-{serial}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not get BIOS serial number: {ex.Message}");
+            }
+
+            // Final fallback: Use machine name hash
+            var machineName = Environment.MachineName;
+            return $"HOST-{Math.Abs(machineName.GetHashCode()):X8}";
         }
 
         private void ViewLogs()

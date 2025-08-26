@@ -110,72 +110,47 @@ export async function POST(request: Request) {
       console.log('🔄 Generated UUID for device_id:', deviceId);
     }
 
-    // Check if device exists, if not register it
-    const { data: existingDevice, error: deviceCheckError } = await supabase
-      .from('devices')
-      .select('device_id, last_seen')
-      .eq('device_id', deviceId)
-      .single();
+    // Use upsert logic to either insert new device or update existing one
+    const deviceData = {
+      device_id: deviceId,
+      license_key: body.license_key,
+      device_name: body.system_info?.hostname || body.system_info?.machine_name || 'Unknown Device',
+      device_type: 'workstation',
+      os_name: body.system_info?.os_name || 'Unknown OS',
+      os_version: body.system_info?.os_version || 'Unknown Version',
+      hostname: body.system_info?.hostname || body.system_info?.machine_name || 'Unknown Hostname',
+      mac_address: body.network_health?.network_interfaces?.[0]?.mac_address || null,
+      ip_address: body.network_health?.network_interfaces?.[0]?.ip_addresses?.[0] || null,
+      is_active: true,
+      last_seen: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
 
-    if (deviceCheckError && deviceCheckError.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('❌ Error checking device:', deviceCheckError);
+    // Use upsert to either insert new device or update existing one
+    const { error: deviceUpsertError } = await supabase
+      .from('devices')
+      .upsert([deviceData], {
+        onConflict: 'device_id',
+        ignoreDuplicates: false
+      });
+
+    if (deviceUpsertError) {
+      console.error('❌ Failed to upsert device:', deviceUpsertError);
       return NextResponse.json(
-        { error: 'Failed to check device registration' },
+        { error: 'Failed to register/update device' },
         { status: 500 }
       );
     }
 
-    if (!existingDevice) {
-      // Register new device
-      console.log('🆕 Registering new device:', deviceId);
-      
-      const { error: deviceInsertError } = await supabase
-        .from('devices')
-        .insert([
-          {
-            device_id: deviceId,
-            license_key: body.license_key,
-            device_name: body.system_info?.hostname || 'Unknown Device',
-            device_type: 'workstation',
-            os_name: body.system_info?.os_name || 'Unknown OS',
-            os_version: body.system_info?.os_version || 'Unknown Version',
-            hostname: body.system_info?.hostname || 'Unknown Hostname',
-            mac_address: body.system_info?.mac_address || null,
-            ip_address: body.system_info?.ip_address || null,
-            is_active: true
-          }
-        ]);
-
-      if (deviceInsertError) {
-        console.error('❌ Failed to register device:', deviceInsertError);
-        return NextResponse.json(
-          { error: 'Failed to register device' },
-          { status: 500 }
-        );
-      }
-
-      console.log('✅ Device registered successfully');
-    } else {
-      // Update last_seen and is_active for existing device
-      console.log('🔄 Updating last_seen for existing device:', deviceId);
-      
-      const { error: updateError } = await supabase
-        .from('devices')
-        .update({ 
-          last_seen: new Date().toISOString(),
-          is_active: true
-        })
-        .eq('device_id', deviceId);
-
-      if (updateError) {
-        console.warn('⚠️ Failed to update last_seen:', updateError);
-        // Continue anyway, this is not critical
-      }
-    }
+    console.log('✅ Device registered/updated successfully:', deviceId);
 
     // If this is just a heartbeat (no full health data), return early
-    if (body.heartbeat === true) {
+    if (body.type === "heartbeat") {
       console.log('💓 Heartbeat received from device:', deviceId);
+      
+      // Store heartbeat data with retention policy in health_metrics table
+      await storeHeartbeatWithRetention(deviceId, body);
+      
       return NextResponse.json({
         status: 'success',
         message: 'Heartbeat received',
@@ -242,5 +217,93 @@ export async function POST(request: Request) {
       },
       { status: 500 }
     )
+  }
+}
+
+// Helper function to store heartbeats with retention policy
+async function storeHeartbeatWithRetention(deviceId: string, heartbeatData: any) {
+  try {
+    // Configurable heartbeat retention limit (default: 5)
+    const maxHeartbeatsPerDevice = parseInt(process.env.HEARTBEAT_RETENTION_LIMIT || '5');
+    
+    // Insert new heartbeat as a health metric with type 'heartbeat'
+    const { error: insertError } = await supabase
+      .from('health_metrics')
+      .insert([
+        {
+          device_id: deviceId,
+          license_key: heartbeatData.license_key,
+          timestamp: heartbeatData.timestamp,
+          metric_type: 'heartbeat', // Mark as heartbeat type
+          value: 100, // Heartbeat is always "healthy"
+          unit: null,
+          system_info: heartbeatData.system_info || {},
+          performance_metrics: {},
+          disk_health: [],
+          memory_health: {},
+          network_health: {},
+          service_health: [],
+          security_health: {},
+          agent_info: {},
+          raw_data: heartbeatData
+        }
+      ]);
+
+    if (insertError) {
+      console.error('❌ Failed to store heartbeat:', insertError);
+      return;
+    }
+
+    // Get count of heartbeat records for this device
+    const { data: heartbeatCount, error: countError } = await supabase
+      .from('health_metrics')
+      .select('id', { count: 'exact' })
+      .eq('device_id', deviceId)
+      .eq('metric_type', 'heartbeat');
+
+    if (countError) {
+      console.error('❌ Error counting heartbeats:', countError);
+      return;
+    }
+
+    const currentCount = heartbeatCount?.length || 0;
+
+    // If we have more than the limit, delete the oldest heartbeat records
+    if (currentCount > maxHeartbeatsPerDevice) {
+      const heartbeatsToDelete = currentCount - maxHeartbeatsPerDevice;
+      
+      // Get the oldest heartbeat records to delete
+      const { data: oldHeartbeats, error: selectError } = await supabase
+        .from('health_metrics')
+        .select('id')
+        .eq('device_id', deviceId)
+        .eq('metric_type', 'heartbeat')
+        .order('timestamp', { ascending: true })
+        .limit(heartbeatsToDelete);
+
+      if (selectError) {
+        console.error('❌ Error selecting old heartbeats:', selectError);
+        return;
+      }
+
+      if (oldHeartbeats && oldHeartbeats.length > 0) {
+        const idsToDelete = oldHeartbeats.map(h => h.id);
+        
+        const { error: deleteError } = await supabase
+          .from('health_metrics')
+          .delete()
+          .in('id', idsToDelete);
+
+        if (deleteError) {
+          console.error('❌ Error deleting old heartbeats:', deleteError);
+        } else {
+          console.log(`🗑️ Deleted ${idsToDelete.length} old heartbeat records for device ${deviceId} (keeping ${maxHeartbeatsPerDevice} latest)`);
+        }
+      }
+    }
+
+    console.log('💓 Heartbeat stored successfully with retention policy');
+  } catch (error) {
+    console.error('❌ Error in heartbeat storage:', error);
   }
 } 

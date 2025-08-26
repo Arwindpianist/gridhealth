@@ -80,18 +80,71 @@ public class HealthCollectorService : IHealthCollectorService
     {
         try
         {
+            // First try to get the UUID from WMI (most stable)
             using var searcher = new ManagementObjectSearcher("SELECT UUID FROM Win32_ComputerSystemProduct");
             foreach (ManagementObject obj in searcher.Get())
             {
-                return obj["UUID"]?.ToString() ?? Environment.MachineName;
+                var uuid = obj["UUID"]?.ToString();
+                if (!string.IsNullOrEmpty(uuid) && uuid != "00000000-0000-0000-0000-000000000000")
+                {
+                    return uuid;
+                }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not get device UUID");
+            _logger.LogWarning(ex, "Could not get device UUID from WMI");
         }
-        
-        return Environment.MachineName;
+
+        try
+        {
+            // Fallback: Try to get Serial Number from BIOS
+            using var searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_BIOS");
+            foreach (ManagementObject obj in searcher.Get())
+            {
+                var serial = obj["SerialNumber"]?.ToString();
+                if (!string.IsNullOrEmpty(serial) && serial != "0" && serial != "To be filled by O.E.M.")
+                {
+                    return $"BIOS-{serial}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not get BIOS serial number");
+        }
+
+        try
+        {
+            // Fallback: Try to get MAC address of primary network adapter
+            var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+            foreach (var ni in networkInterfaces)
+            {
+                if (ni.OperationalStatus == OperationalStatus.Up && 
+                    ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                {
+                    var macAddress = ni.GetPhysicalAddress().ToString();
+                    if (!string.IsNullOrEmpty(macAddress))
+                    {
+                        return $"MAC-{macAddress}";
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not get MAC address");
+        }
+
+        // Final fallback: Use machine name (less stable but better than random)
+        var machineName = Environment.MachineName;
+        if (!string.IsNullOrEmpty(machineName))
+        {
+            return $"HOST-{machineName}";
+        }
+
+        // Last resort: Generate a stable ID based on machine name hash
+        return $"HASH-{Math.Abs(machineName.GetHashCode()):X8}";
     }
 
     private string GetLicenseKey()
