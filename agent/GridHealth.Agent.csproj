@@ -11,8 +11,8 @@
     <AssemblyDescription>Enterprise system health monitoring agent</AssemblyDescription>
     <AssemblyCompany>GridHealth</AssemblyCompany>
     <AssemblyProduct>GridHealth Agent</AssemblyProduct>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>
+    <FileVersion>1.0.3.0</FileVersion>
     
     <!-- Self-contained deployment settings -->
     <PublishSingleFile>true</PublishSingleFile>

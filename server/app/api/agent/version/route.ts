@@ -113,6 +113,16 @@ function getFallbackVersions() {
   
   const fallbackVersions: AgentVersion[] = [
     {
+      version: "v1.0.3",
+      downloadUrl: "https://gridhealth.arwindpianist.store/api/download/agent/v1.0.3",
+      fileName: "GridHealth-Agent-v1.0.3.zip",
+      fileSize: 69206016,
+      releaseDate: "2025-08-26T23:30:00.000Z",
+      releaseNotes: "Enhanced health monitoring, improved performance, bug fixes, and security improvements",
+      downloadCount: 0,
+      githubUrl: "https://github.com/Arwindpianist/gridhealth/releases/tag/v1.0.3"
+    },
+    {
       version: "v1.0.2",
       downloadUrl: "https://gridhealth.arwindpianist.store/api/download/agent/v1.0.2",
       fileName: "GridHealth-Agent-v1.0.2.zip",

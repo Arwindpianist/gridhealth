@@ -7,7 +7,7 @@ echo ========================================
 echo.
 
 REM Set version and paths
-set "VERSION=1.0.0"
+set "VERSION=1.0.3"
 set "RELEASE_DIR=release"
 set "PACKAGE_NAME=GridHealth-Agent-v%VERSION%"
 
