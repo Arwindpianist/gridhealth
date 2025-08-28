@@ -514,8 +514,27 @@ export default function DownloadPage() {
               Use this license key when configuring your GridHealth agent:
             </p>
             
-            <div className="bg-dark-700 p-4 rounded-lg mb-6">
+            <div className="bg-dark-700 p-4 rounded-lg mb-6 relative">
               <p className="text-white font-mono text-center break-all">{selectedLicense.license_key}</p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(selectedLicense.license_key);
+                  // Show temporary success message
+                  const button = document.getElementById('copy-btn');
+                  if (button) {
+                    button.textContent = 'Copied!';
+                    button.classList.add('bg-green-600');
+                    setTimeout(() => {
+                      button.textContent = 'Copy';
+                      button.classList.remove('bg-green-600');
+                    }, 2000);
+                  }
+                }}
+                id="copy-btn"
+                className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors"
+              >
+                Copy
+              </button>
             </div>
 
             <div className="mb-6">

@@ -7,6 +7,10 @@ import { getDeviceHealthData } from '../../../../lib/healthMetrics'
 
 import HealthMetricsDisplay from '../../../components/HealthMetricsDisplay'
 
+// Force dynamic rendering to prevent caching of health data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface DevicePageProps {
   params: {
     deviceId: string

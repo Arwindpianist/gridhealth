@@ -194,7 +194,7 @@ export default function HomePage() {
             <Link href="/signup" className="btn-primary text-lg px-12 py-4">
               🚀 Get Started Today
             </Link>
-            <Link href="/signup" className="btn-outline text-lg px-12 py-4">
+            <Link href="/benefits" className="btn-outline text-lg px-12 py-4">
               📊 View Demo
             </Link>
           </div>

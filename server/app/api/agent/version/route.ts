@@ -28,7 +28,20 @@ interface AgentVersion {
 
 export async function GET(request: NextRequest) {
   try {
-    // First, try to fetch releases from GitHub API
+    // First, get local versions from dynamic scanning
+    const localVersions = await getDynamicVersions()
+    let localLatest: AgentVersion | null = null
+    let localData: any = null
+    
+    if (localVersions.status === 200) {
+      localData = await localVersions.json()
+      localLatest = localData.latest
+      if (localLatest) {
+        console.log(`Latest local version: ${localLatest.version}`)
+      }
+    }
+
+    // Then, try to fetch releases from GitHub API
     const githubResponse = await fetch(
       'https://api.github.com/repos/Arwindpianist/gridhealth/releases',
       {
@@ -43,7 +56,7 @@ export async function GET(request: NextRequest) {
       const releases: GitHubRelease[] = await githubResponse.json()
       
       // Filter and map releases to our format
-      const agentVersions: AgentVersion[] = releases
+      const githubVersions: AgentVersion[] = releases
         .filter(release => release.tag_name.startsWith('v'))
         .map(release => {
           // Find the main agent zip file
@@ -67,28 +80,60 @@ export async function GET(request: NextRequest) {
         .filter((version): version is AgentVersion => version !== null)
         .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime())
 
-      if (agentVersions.length > 0) {
-        const latestVersion = agentVersions[0]
-        console.log(`Latest agent version from GitHub: ${latestVersion.version}`)
+      if (githubVersions.length > 0) {
+        const githubLatest = githubVersions[0]
+        console.log(`Latest GitHub version: ${githubLatest.version}`)
         
-        return NextResponse.json({
-          latest: latestVersion,
-          all: agentVersions,
-          totalReleases: agentVersions.length,
-          source: 'github'
-        })
+        // Compare versions and prioritize the newer one
+        if (localLatest && isVersionNewer(localLatest.version, githubLatest.version)) {
+          console.log(`Local version ${localLatest.version} is newer than GitHub ${githubLatest.version}, using local`)
+          return NextResponse.json({
+            latest: localLatest,
+            all: localData.all,
+            totalReleases: localData.totalReleases,
+            source: 'local-prioritized'
+          })
+        } else {
+          console.log(`GitHub version ${githubLatest.version} is newer or equal to local ${localLatest?.version || 'none'}, using GitHub`)
+          return NextResponse.json({
+            latest: githubLatest,
+            all: githubVersions,
+            totalReleases: githubVersions.length,
+            source: 'github'
+          })
+        }
       }
     }
 
-    // If GitHub fails or no releases found, try dynamic scanning of downloads folder
-    console.log('GitHub API failed or no releases found, trying dynamic scan')
-    return await getDynamicVersions()
+    // If GitHub fails or no releases found, use local versions
+    if (localLatest) {
+      console.log('GitHub API failed, using local versions')
+      return NextResponse.json({
+        latest: localLatest,
+        all: localData.all,
+        totalReleases: localData.totalReleases,
+        source: 'local-fallback'
+      })
+    }
+
+    // If both fail, use fallback
+    console.log('Both local and GitHub failed, using fallback')
+    return getFallbackVersions()
 
   } catch (error) {
-    console.error('Error fetching GitHub releases:', error)
-    // Fallback to dynamic scanning
-    console.log('Falling back to dynamic version scanning')
-    return await getDynamicVersions()
+    console.error('Error in version detection:', error)
+    // Try to use local versions as fallback
+    try {
+      const localVersions = await getDynamicVersions()
+      if (localVersions.status === 200) {
+        return localVersions
+      }
+    } catch (localError) {
+      console.error('Local version fallback also failed:', localError)
+    }
+    
+    // Final fallback
+    return getFallbackVersions()
   }
 }
 
@@ -188,6 +233,23 @@ async function getDynamicVersions() {
   }
 }
 
+function isVersionNewer(versionA: string, versionB: string): boolean {
+  // Remove 'v' prefix and split by dots
+  const partsA = versionA.replace('v', '').split('.').map(Number)
+  const partsB = versionB.replace('v', '').split('.').map(Number)
+  
+  // Compare each part
+  for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+    const numA = partsA[i] || 0
+    const numB = partsB[i] || 0
+    if (numA > numB) return true
+    if (numA < numB) return false
+  }
+  
+  // If all parts are equal, versionA is not newer
+  return false
+}
+
 function getShortReleaseNotes(version: string, fullNotes: string): string {
   // If no notes, return a short description
   if (!fullNotes || fullNotes.trim() === '') {
@@ -246,7 +308,7 @@ function getFallbackVersions() {
       githubUrl: "https://github.com/Arwindpianist/gridhealth/releases/tag/v1.0.2"
     },
     {
-      version: "1.0.1",
+      version: "v1.0.1",
       downloadUrl: "https://github.com/Arwindpianist/gridhealth/releases/download/v1.0.1/GridHealth-Agent-v1.0.1.zip",
       fileName: "GridHealth-Agent-v1.0.1.zip",
       fileSize: 73114548,
