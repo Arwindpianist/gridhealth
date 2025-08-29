@@ -36,6 +36,7 @@ export default function ProfilePage() {
     contact_phone: ''
   })
   const [message, setMessage] = useState('')
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     if (isLoaded && user) {
@@ -46,10 +47,15 @@ export default function ProfilePage() {
   const loadProfile = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/user/role')
+      const response = await fetch('/api/user/profile')
       if (response.ok) {
         const data = await response.json()
         
+        // Check if user is admin
+        if (data.userRole?.role === 'admin') {
+          setIsAdmin(true)
+        }
+
         if (data.user) {
           const profileData: UserProfile = {
             first_name: data.user.first_name || '',
@@ -265,17 +271,20 @@ export default function ProfilePage() {
             <div>
               <h3 className="text-lg font-semibold text-white mb-4">Account Type</h3>
               <div className="space-y-3">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="account_type"
-                    value="admin"
-                    checked={profile.account_type === 'admin'}
-                    onChange={(e) => updateProfile('account_type', e.target.value)}
-                    className="mr-3 text-gridhealth-500 focus:ring-gridhealth-500"
-                  />
-                  <span className="text-gray-300">Admin Account</span>
-                </label>
+                {/* Only show admin option for admin users */}
+                {isAdmin && (
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="account_type"
+                      value="admin"
+                      checked={profile.account_type === 'admin'}
+                      onChange={(e) => updateProfile('account_type', e.target.value)}
+                      className="mr-3 text-gridhealth-500 focus:ring-gridhealth-500"
+                    />
+                    <span className="text-gray-300">Admin Account</span>
+                  </label>
+                )}
                 <label className="flex items-center">
                   <input
                     type="radio"

@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '../../lib/supabase'
 import Link from 'next/link'
+import { isAdminOrOwner } from '../../lib/authUtils'
 
 async function getAdminData() {
   try {
@@ -137,25 +138,10 @@ export default async function AdminPage() {
     redirect('/')
   }
 
-  // Check if user is admin
-  const { data: user } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('clerk_user_id', userId)
-    .single()
-
-  if (!user) {
-    redirect('/')
-  }
-
-  const { data: userRole } = await supabaseAdmin
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .eq('role', 'admin')
-    .single()
-
-  if (!userRole) {
+  // Check if user is admin or owner
+  const isAdminUser = await isAdminOrOwner()
+  if (!isAdminUser) {
+    console.log('❌ Non-admin user attempted to access admin page')
     redirect('/dashboard')
   }
 
