@@ -63,12 +63,22 @@ export async function POST(request: NextRequest) {
         return minutesSinceLastSeen <= 5
       })() : false
 
+      console.log(`Processing device ${device.device_id}: online=${isOnline}, last_seen=${device.last_seen}`)
+
       // Generate realistic metrics based on online status
       let healthScore = 100
       let cpuUsage = 0
       let memoryUsage = 0
       let diskUsage = 0
       let networkStatus = 'unknown'
+
+      // Individual health scores
+      let performanceScore = 100
+      let diskScore = 100
+      let memoryScore = 100
+      let networkScore = 100
+      let servicesScore = 100
+      let securityScore = 100
 
       if (isOnline) {
         // Online device - generate realistic metrics
@@ -77,24 +87,59 @@ export async function POST(request: NextRequest) {
         memoryUsage = Math.floor(Math.random() * 50) + 20 // 20-70%
         diskUsage = Math.floor(Math.random() * 40) + 30 // 30-70%
         networkStatus = 'connected'
+
+        // Calculate individual scores based on usage
+        performanceScore = Math.max(0, 100 - Math.floor((cpuUsage + memoryUsage) / 2))
+        memoryScore = Math.max(0, 100 - memoryUsage)
+        diskScore = Math.max(0, 100 - diskUsage)
+        networkScore = 100 // Connected = good network
+        servicesScore = Math.floor(Math.random() * 20) + 80 // 80-100 (most services running)
+        securityScore = Math.floor(Math.random() * 30) + 70 // 70-100 (generally good security)
       } else {
-        // Offline device - all metrics are 0
+        // Offline device - all metrics are 0 or low
         healthScore = Math.floor(Math.random() * 20) + 30 // 30-50
         cpuUsage = 0
         memoryUsage = 0
         diskUsage = 0
         networkStatus = 'disconnected'
+
+        // Offline device scores
+        performanceScore = Math.floor(Math.random() * 20) + 30 // 30-50
+        memoryScore = Math.floor(Math.random() * 20) + 30 // 30-50
+        diskScore = Math.floor(Math.random() * 20) + 30 // 30-50
+        networkScore = 0 // Disconnected = no network
+        servicesScore = Math.floor(Math.random() * 20) + 30 // 30-50
+        securityScore = Math.floor(Math.random() * 20) + 30 // 30-50
       }
 
-      return {
+      const result = {
         device_id: device.device_id,
         timestamp: device.last_seen || new Date().toISOString(),
         health_score: healthScore,
         cpu_usage: cpuUsage,
         memory_usage: memoryUsage,
         disk_usage: diskUsage,
-        network_status: networkStatus
+        network_status: networkStatus,
+        // Individual health scores
+        performance_score: performanceScore,
+        disk_score: diskScore,
+        memory_score: memoryScore,
+        network_score: networkScore,
+        services_score: servicesScore,
+        security_score: securityScore
       }
+      
+      console.log(`Device ${device.device_id} metrics:`, {
+        health_score: healthScore,
+        performance_score: performanceScore,
+        disk_score: diskScore,
+        memory_score: memoryScore,
+        network_score: networkScore,
+        services_score: servicesScore,
+        security_score: securityScore
+      })
+      
+      return result
     })
 
     return NextResponse.json({

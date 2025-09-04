@@ -47,6 +47,9 @@ export default async function DevicePage({ params }: DevicePageProps) {
   if (healthMetricsResponse.ok) {
     const healthData = await healthMetricsResponse.json()
     healthMetrics = healthData.metrics || []
+    console.log('Health metrics received:', healthMetrics)
+  } else {
+    console.error('Failed to fetch health metrics:', healthMetricsResponse.status, healthMetricsResponse.statusText)
   }
 
   // Get the latest health metrics for this device
@@ -56,8 +59,16 @@ export default async function DevicePage({ params }: DevicePageProps) {
     cpu_usage: 0,
     memory_usage: 0,
     disk_usage: 0,
-    network_status: 'unknown'
+    network_status: 'unknown',
+    performance_score: 100,
+    disk_score: 100,
+    memory_score: 100,
+    network_score: 100,
+    services_score: 100,
+    security_score: 100
   }
+  
+  console.log('Latest metrics for device:', latestMetrics)
 
   // Calculate device status
   const isOnline = device.last_seen ? (() => {
@@ -295,12 +306,12 @@ export default async function DevicePage({ params }: DevicePageProps) {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             {Object.entries({
-              'Performance': { score: latestMetrics.cpu_usage, color: 'green', icon: '⚡' },
-              'Disk': { score: latestMetrics.disk_usage, color: 'blue', icon: '💾' },
-              'Memory': { score: latestMetrics.memory_usage, color: 'purple', icon: '🧠' },
-              'Network': { score: latestMetrics.network_status === 'connected' ? 100 : 0, color: 'yellow', icon: '🌐' },
-              'Services': { score: latestMetrics.health_score, color: 'orange', icon: '🔧' },
-              'Security': { score: latestMetrics.health_score, color: 'red', icon: '🛡️' }
+              'Performance': { score: latestMetrics.performance_score || 0, color: 'green', icon: '⚡' },
+              'Disk': { score: latestMetrics.disk_score || 0, color: 'blue', icon: '💾' },
+              'Memory': { score: latestMetrics.memory_score || 0, color: 'purple', icon: '🧠' },
+              'Network': { score: latestMetrics.network_score || 0, color: 'yellow', icon: '🌐' },
+              'Services': { score: latestMetrics.services_score || 0, color: 'orange', icon: '🔧' },
+              'Security': { score: latestMetrics.security_score || 0, color: 'red', icon: '🛡️' }
             }).map(([category, { score, color, icon }]) => (
               <div key={category} className="text-center p-4 bg-dark-700/50 rounded-xl border border-dark-600/30 hover:border-dark-500/50 transition-all duration-200 hover:scale-105 group">
                 <div className="text-3xl mb-2">{icon}</div>
