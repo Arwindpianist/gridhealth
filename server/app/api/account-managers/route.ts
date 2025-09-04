@@ -112,9 +112,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    // Verify user has permission to add account managers (owner or admin only)
-    if (!['owner', 'admin'].includes(userRole.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions. Only owners and admins can add account managers.' }, { status: 403 })
+    // Verify user has permission to add account managers (owner, admin, or organization/company owner)
+    if (!['owner', 'admin'].includes(userRole.role) && 
+        !(userRole.role === 'organization' && userRole.organization_id) &&
+        !(userRole.role === 'company' && userRole.company_id)) {
+      return NextResponse.json({ error: 'Insufficient permissions. Only owners, admins, and organization/company owners can add account managers.' }, { status: 403 })
     }
 
     // Prevent non-owners from adding other owners

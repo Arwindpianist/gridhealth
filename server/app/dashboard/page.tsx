@@ -194,8 +194,10 @@ export default async function DashboardPage() {
               <p className="text-dark-300">Get started with system health monitoring</p>
             </div>
             <div className="flex space-x-4">
-              {/* Only show management button for admin users */}
-              {userRole?.role === 'admin' && (
+              {/* Show management button for organization/company owners and system admins */}
+              {(userRole?.role === 'admin' || userRole?.role === 'owner' || 
+                (userRole?.role === 'organization' && userRole?.organization_id) || 
+                (userRole?.role === 'company' && userRole?.company_id)) && (
                 <a 
                   href="/management" 
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"

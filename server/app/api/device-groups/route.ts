@@ -113,8 +113,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    // Verify user has permission to create groups (admin or owner)
-    if (!['owner', 'admin'].includes(userRole.role)) {
+    // Verify user has permission to create groups (admin, owner, or organization/company owner)
+    if (!['owner', 'admin'].includes(userRole.role) && 
+        !(userRole.role === 'organization' && userRole.organization_id) &&
+        !(userRole.role === 'company' && userRole.company_id)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 

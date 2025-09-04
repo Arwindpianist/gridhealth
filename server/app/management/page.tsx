@@ -60,10 +60,14 @@ export default function ManagementPage() {
       const response = await fetch('/api/user/role')
       if (response.ok) {
         const data = await response.json()
-        if (data.userRole?.role === 'admin' || data.userRole?.role === 'owner') {
+        // Allow access for system admins, organization owners, and company owners
+        if (data.userRole?.role === 'admin' || 
+            data.userRole?.role === 'owner' ||
+            (data.userRole?.role === 'organization' && data.userRole?.organization_id) ||
+            (data.userRole?.role === 'company' && data.userRole?.company_id)) {
           setIsAdmin(true)
         } else {
-          // Redirect non-admin users
+          // Redirect users who don't have management access
           router.push('/dashboard')
         }
       }
