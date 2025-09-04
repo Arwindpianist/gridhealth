@@ -269,119 +269,222 @@ export default function ManagementPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900">
-      {/* Header */}
-      <div className="bg-dark-800/80 backdrop-blur-sm border-b border-dark-700/50 sticky top-0 z-10">
+      {/* Enhanced Header */}
+      <div className="bg-gradient-to-r from-dark-800/95 to-dark-700/95 backdrop-blur-sm border-b border-dark-600/50 sticky top-0 z-10 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                Management Center
-              </h1>
-              <p className="text-dark-300 mt-2">Manage account managers and device groups</p>
+          <div className="flex justify-between items-center py-8">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
+                  Management Center
+                </h1>
+                <p className="text-dark-300 mt-1 text-lg">Manage account managers and device groups</p>
+              </div>
             </div>
             <Link
               href="/dashboard"
-              className="bg-dark-700 hover:bg-dark-600 text-white px-4 py-2 rounded-lg transition-colors"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center space-x-2"
             >
-              Back to Dashboard
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>Back to Dashboard</span>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Enhanced Tab Navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex space-x-1 bg-dark-700 rounded-lg p-1 mb-8">
-          <button
-            onClick={() => setActiveTab('managers')}
-            className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
-              activeTab === 'managers'
-                ? 'bg-blue-600 text-white'
-                : 'text-dark-300 hover:text-white'
-            }`}
-          >
-            Account Managers
-          </button>
-          <button
-            onClick={() => setActiveTab('groups')}
-            className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
-              activeTab === 'groups'
-                ? 'bg-blue-600 text-white'
-                : 'text-dark-300 hover:text-white'
-            }`}
-          >
-            Device Groups
-          </button>
+        <div className="bg-gradient-to-r from-dark-800/50 to-dark-700/50 backdrop-blur-sm rounded-2xl border border-dark-600/30 p-2 mb-8 shadow-xl">
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setActiveTab('managers')}
+              className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-all duration-300 transform ${
+                activeTab === 'managers'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg scale-105'
+                  : 'text-dark-300 hover:text-white hover:bg-dark-600/50'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-3">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+                <span>Account Managers</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('groups')}
+              className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-all duration-300 transform ${
+                activeTab === 'groups'
+                  ? 'bg-gradient-to-r from-green-600 to-teal-600 text-white shadow-lg scale-105'
+                  : 'text-dark-300 hover:text-white hover:bg-dark-600/50'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-3">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>Device Groups</span>
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* Account Managers Tab */}
         {activeTab === 'managers' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">Account Managers</h2>
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  Account Managers
+                </h2>
+                <p className="text-dark-300 mt-2">Manage user access and permissions</p>
+              </div>
               <button
                 onClick={() => setShowAddManagerModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center space-x-3"
               >
-                Add Manager
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Add Manager</span>
               </button>
             </div>
 
-            <div className="bg-dark-800 rounded-lg border border-dark-700 overflow-hidden">
+            <div className="bg-gradient-to-br from-dark-800/80 to-dark-700/80 backdrop-blur-sm rounded-2xl border border-dark-600/30 overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-dark-700">
-                  <thead className="bg-dark-700">
+                <table className="min-w-full divide-y divide-dark-600/30">
+                  <thead className="bg-gradient-to-r from-dark-700/80 to-dark-600/80">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">
-                        User
+                      <th className="px-8 py-4 text-left text-xs font-semibold text-dark-200 uppercase tracking-wider">
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span>User</span>
+                        </div>
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">
-                        Role
+                      <th className="px-8 py-4 text-left text-xs font-semibold text-dark-200 uppercase tracking-wider">
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                          <span>Role</span>
+                        </div>
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">
-                        Permissions
+                      <th className="px-8 py-4 text-left text-xs font-semibold text-dark-200 uppercase tracking-wider">
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 4v6m-4-6h8" />
+                          </svg>
+                          <span>Permissions</span>
+                        </div>
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">
-                        Group Access
+                      <th className="px-8 py-4 text-left text-xs font-semibold text-dark-200 uppercase tracking-wider">
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                          <span>Group Access</span>
+                        </div>
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-dark-300 uppercase tracking-wider">
-                        Actions
+                      <th className="px-8 py-4 text-left text-xs font-semibold text-dark-200 uppercase tracking-wider">
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                          </svg>
+                          <span>Actions</span>
+                        </div>
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-dark-800 divide-y divide-dark-700">
+                  <tbody className="bg-dark-800/50 divide-y divide-dark-600/30">
                     {accountManagers.map((manager) => (
-                      <tr key={manager.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-white">{manager.user_email || manager.user_id}</div>
+                      <tr key={manager.id} className="hover:bg-dark-700/30 transition-all duration-200 group">
+                        <td className="px-8 py-6 whitespace-nowrap">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full flex items-center justify-center">
+                              <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="text-sm font-semibold text-white">{manager.user_email || manager.user_id}</div>
+                              <div className="text-xs text-dark-400">Account Manager</div>
+                            </div>
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white ${getRoleColor(manager.role)}`}>
+                        <td className="px-8 py-6 whitespace-nowrap">
+                          <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full text-white shadow-lg ${getRoleColor(manager.role)}`}>
                             {manager.role}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-dark-300">
-                            {manager.permissions?.access_all && <span className="block">• Access All</span>}
-                            {manager.permissions?.system_admin && <span className="block">• System Admin</span>}
+                        <td className="px-8 py-6 whitespace-nowrap">
+                          <div className="text-sm text-dark-300 space-y-1">
+                            {manager.permissions?.access_all && (
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                <span>Access All</span>
+                              </div>
+                            )}
+                            {manager.permissions?.system_admin && (
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                                <span>System Admin</span>
+                              </div>
+                            )}
+                            {!manager.permissions?.access_all && !manager.permissions?.system_admin && (
+                              <span className="text-dark-400">No special permissions</span>
+                            )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-8 py-6 whitespace-nowrap">
                           <div className="text-sm text-dark-300">
-                            {manager.group_access?.length > 0 ? manager.group_access.join(', ') : 'All Groups'}
+                            {manager.group_access?.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {manager.group_access.slice(0, 2).map((group, index) => (
+                                  <span key={index} className="px-2 py-1 bg-dark-600/50 rounded-md text-xs">
+                                    {group}
+                                  </span>
+                                ))}
+                                {manager.group_access.length > 2 && (
+                                  <span className="px-2 py-1 bg-dark-600/50 rounded-md text-xs">
+                                    +{manager.group_access.length - 2} more
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-green-400 font-medium">All Groups</span>
+                            )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button 
-                            onClick={() => {
-                              setEditingManager(manager)
-                              setShowEditManagerModal(true)
-                            }}
-                            className="text-blue-400 hover:text-blue-300 mr-3"
-                          >
-                            Edit
-                          </button>
-                          <button className="text-red-400 hover:text-red-300">Remove</button>
+                        <td className="px-8 py-6 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center space-x-3">
+                            <button 
+                              onClick={() => {
+                                setEditingManager(manager)
+                                setShowEditManagerModal(true)
+                              }}
+                              className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-300 px-3 py-1 rounded-lg transition-all duration-200 flex items-center space-x-1"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              <span>Edit</span>
+                            </button>
+                            <button className="bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 px-3 py-1 rounded-lg transition-all duration-200 flex items-center space-x-1">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              <span>Remove</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -395,50 +498,91 @@ export default function ManagementPage() {
         {/* Device Groups Tab */}
         {activeTab === 'groups' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">Device Groups</h2>
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-teal-400 bg-clip-text text-transparent">
+                  Device Groups
+                </h2>
+                <p className="text-dark-300 mt-2">Organize devices into logical groups</p>
+              </div>
               <button
                 onClick={() => setShowAddGroupModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center space-x-3"
               >
-                Add Group
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Add Group</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {deviceGroups.map((group) => (
-                <div key={group.id} className="bg-dark-800 border border-dark-700 rounded-lg p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-1">{group.name}</h3>
-                      <p className="text-dark-400 text-sm">{group.description}</p>
+                <div key={group.id} className="bg-gradient-to-br from-dark-800/80 to-dark-700/80 backdrop-blur-sm border border-dark-600/30 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 group">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">{group.name}</h3>
+                      <p className="text-dark-400 text-sm leading-relaxed">{group.description}</p>
                     </div>
-                    <span className="bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-medium">
-                      {group.device_count} devices
-                    </span>
+                    <div className="ml-4">
+                      <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
+                        {group.device_count} devices
+                      </span>
+                    </div>
                   </div>
-                  <div className="space-y-2 text-sm mb-4">
-                    <div className="flex justify-between">
-                      <span className="text-dark-400">License:</span>
-                      <span className="text-white font-mono text-xs">{group.license_key}</span>
+                  
+                  <div className="space-y-3 text-sm mb-6">
+                    <div className="flex items-center justify-between p-3 bg-dark-700/30 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        <span className="text-dark-300">License:</span>
+                      </div>
+                      <span className="text-white font-mono text-xs bg-dark-600/50 px-2 py-1 rounded">{group.license_key}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-dark-400">Created:</span>
+                    <div className="flex items-center justify-between p-3 bg-dark-700/30 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0H8m6 0v4m-6-4v4m6-4h6m-6 0H8m6 0v4m-6-4v4" />
+                        </svg>
+                        <span className="text-dark-300">Created:</span>
+                      </div>
                       <span className="text-white">{new Date(group.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <div className="flex space-x-2">
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <Link
+                      href={`/group/${group.id}`}
+                      className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      <span>View Group</span>
+                    </Link>
                     <button 
                       onClick={() => {
                         setSelectedGroup(group)
                         setShowAssignDevicesModal(true)
                       }}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
                     >
-                      Assign Devices
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span>Assign Devices</span>
                     </button>
-                    <button className="bg-dark-700 hover:bg-dark-600 text-white px-3 py-2 rounded text-sm transition-colors">
-                      Edit
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-dark-600/30">
+                    <button className="w-full bg-dark-700/50 hover:bg-dark-600/50 text-white px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center justify-center space-x-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <span>Edit Group</span>
                     </button>
                   </div>
                 </div>
@@ -448,82 +592,113 @@ export default function ManagementPage() {
         )}
       </div>
 
-      {/* Add Manager Modal */}
+      {/* Enhanced Add Manager Modal */}
       {showAddManagerModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-lg max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-white mb-4">Add Account Manager</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-dark-800/95 to-dark-700/95 backdrop-blur-sm rounded-2xl max-w-md w-full p-8 shadow-2xl border border-dark-600/30">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Add Account Manager</h3>
+            </div>
             {managerError && (
               <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-4">
                 <p className="text-red-300">{managerError}</p>
               </div>
             )}
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-dark-300 mb-2">Email</label>
+                <label className="block text-sm font-semibold text-dark-200 mb-3">Email Address</label>
                 <input
                   type="email"
                   value={newManager.email}
                   onChange={(e) => setNewManager({ ...newManager, email: e.target.value })}
-                  className="w-full bg-dark-700 border border-dark-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-dark-700/50 border border-dark-600/50 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   placeholder="user@example.com"
                 />
-                <p className="text-xs text-dark-400 mt-1">User must already have a GridHealth account</p>
+                <p className="text-xs text-dark-400 mt-2 flex items-center space-x-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>User must already have a GridHealth account</span>
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-dark-300 mb-2">Role</label>
+                <label className="block text-sm font-semibold text-dark-200 mb-3">Role</label>
                 <select
                   value={newManager.role}
                   onChange={(e) => setNewManager({ ...newManager, role: e.target.value })}
-                  className="w-full bg-dark-700 border border-dark-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-dark-700/50 border border-dark-600/50 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 >
                   <option value="manager">Manager</option>
                   <option value="admin">Admin</option>
                   <option value="viewer">Viewer</option>
                 </select>
               </div>
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={newManager.permissions.access_all}
-                    onChange={(e) => setNewManager({
-                      ...newManager,
-                      permissions: { ...newManager.permissions, access_all: e.target.checked }
-                    })}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-dark-300">Access All</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={newManager.permissions.system_admin}
-                    onChange={(e) => setNewManager({
-                      ...newManager,
-                      permissions: { ...newManager.permissions, system_admin: e.target.checked }
-                    })}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-dark-300">System Admin</span>
-                </label>
+              <div>
+                <label className="block text-sm font-semibold text-dark-200 mb-3">Permissions</label>
+                <div className="space-y-3">
+                  <label className="flex items-center p-3 bg-dark-700/30 rounded-lg hover:bg-dark-600/30 transition-colors cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newManager.permissions.access_all}
+                      onChange={(e) => setNewManager({
+                        ...newManager,
+                        permissions: { ...newManager.permissions, access_all: e.target.checked }
+                      })}
+                      className="mr-3 w-4 h-4 text-blue-600 bg-dark-600 border-dark-500 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm text-white font-medium">Access All Groups</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-3 bg-dark-700/30 rounded-lg hover:bg-dark-600/30 transition-colors cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newManager.permissions.system_admin}
+                      onChange={(e) => setNewManager({
+                        ...newManager,
+                        permissions: { ...newManager.permissions, system_admin: e.target.checked }
+                      })}
+                      className="mr-3 w-4 h-4 text-purple-600 bg-dark-600 border-dark-500 rounded focus:ring-purple-500 focus:ring-2"
+                    />
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      <span className="text-sm text-white font-medium">System Admin</span>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
-            <div className="flex justify-end space-x-3 mt-6">
+            <div className="flex justify-end space-x-4 mt-8">
               <button
                 onClick={() => {
                   setShowAddManagerModal(false)
                   setManagerError('')
                 }}
-                className="bg-dark-700 hover:bg-dark-600 text-white px-4 py-2 rounded-lg transition-colors"
+                className="bg-dark-700/50 hover:bg-dark-600/50 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center space-x-2"
               >
-                Cancel
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span>Cancel</span>
               </button>
               <button
                 onClick={handleAddManager}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center space-x-2"
               >
-                Add Manager
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Add Manager</span>
               </button>
             </div>
           </div>

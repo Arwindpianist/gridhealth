@@ -127,14 +127,24 @@ export default function DevicesByGroups({ initialGroups = [], initialUnassignedD
     <div className="bg-dark-800 rounded-2xl border border-dark-700 p-6">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold text-white">Devices Overview</h3>
-        {groups.length > 0 && (
-          <Link 
-            href="/management" 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm transition-colors"
-          >
-            Manage Groups
-          </Link>
-        )}
+        <div className="flex items-center space-x-3">
+          {activeTab !== 'all' && activeTab !== 'unassigned' && groups.length > 0 && (
+            <Link 
+              href={`/group/${groups.find(g => g.name === activeTab)?.id}`}
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm transition-colors"
+            >
+              View Group Details
+            </Link>
+          )}
+          {groups.length > 0 && (
+            <Link 
+              href="/management" 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm transition-colors"
+            >
+              Manage Groups
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Tab Navigation */}
