@@ -42,7 +42,9 @@ export async function GET(request: NextRequest) {
       .from('devices')
       .select(`
         *,
-        device_groups(name),
+        device_group_members!left(
+          group:device_groups(name)
+        ),
         health_metrics!inner(
           id,
           value,
@@ -56,6 +58,7 @@ export async function GET(request: NextRequest) {
           security_health
         )
       `)
+      .eq('organization_id', organizationId)
       .eq('is_active', true)
       .order('device_name')
 
@@ -79,9 +82,12 @@ export async function GET(request: NextRequest) {
       const healthScan = device.health_metrics?.find((metric: any) => metric.metric_type === 'health_scan')
       const healthScore = healthScan?.value || device.health_score || 100
 
+      // Get group name from the device_group_members relationship
+      const groupName = device.device_group_members?.[0]?.group?.name || null
+
       return {
         ...device,
-        group_name: device.device_groups?.name || null,
+        group_name: groupName,
         health_score: healthScore,
         performance_metrics: performanceMetrics,
         disk_health: diskHealth,
@@ -90,7 +96,7 @@ export async function GET(request: NextRequest) {
         service_health: serviceHealth,
         security_health: securityHealth,
         last_health_check: healthScan?.timestamp || device.last_health_check,
-        device_groups: undefined, // Remove the raw group object
+        device_group_members: undefined, // Remove the raw group object
         health_metrics: undefined // Remove the raw metrics array
       }
     }) || []
