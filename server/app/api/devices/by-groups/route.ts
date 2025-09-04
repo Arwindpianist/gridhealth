@@ -92,36 +92,36 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Format the response
-    const formattedGroups = filteredGroups.map(group => ({
-      id: group.id,
-      name: group.name,
-      description: group.description,
-      license_key: group.license_key,
-      created_at: group.created_at,
-      devices: group.devices?.map(d => ({
-        ...d.device,
-        assigned_at: d.assigned_at
-      })) || [],
-      device_count: group.devices?.length || 0
-    }))
+         // Format the response
+     const formattedGroups = filteredGroups.map(group => ({
+       id: group.id,
+       name: group.name,
+       description: group.description,
+       license_key: group.license_key,
+       created_at: group.created_at,
+       devices: group.devices?.map((d: any) => ({
+         ...d.device,
+         assigned_at: d.assigned_at
+       })) || [],
+       device_count: group.devices?.length || 0
+     }))
 
-    // Get unassigned devices (devices that belong to the organization but aren't in any group)
-    const { data: allDevices, error: devicesError } = await supabaseAdmin
-      .from('devices')
-      .select('device_id, device_name, os_name, os_version, hostname, health_status, last_heartbeat, license_key')
-      .eq('organization_id', organizationId)
+     // Get unassigned devices (devices that belong to the organization but aren't in any group)
+     const { data: allDevices, error: devicesError } = await supabaseAdmin
+       .from('devices')
+       .select('device_id, device_name, os_name, os_version, hostname, health_status, last_heartbeat, license_key')
+       .eq('organization_id', organizationId)
 
-    if (devicesError) {
-      console.error('Error fetching devices:', devicesError)
-      return NextResponse.json({ error: 'Failed to fetch devices' }, { status: 500 })
-    }
+     if (devicesError) {
+       console.error('Error fetching devices:', devicesError)
+       return NextResponse.json({ error: 'Failed to fetch devices' }, { status: 500 })
+     }
 
-         // Get all assigned device IDs
+     // Get all assigned device IDs
      const assignedDeviceIds = new Set<string>()
      formattedGroups.forEach(group => {
        if (group.devices && Array.isArray(group.devices)) {
-         group.devices.forEach(device => {
+         group.devices.forEach((device: any) => {
            if (device && device.device_id) {
              assignedDeviceIds.add(device.device_id)
            }
