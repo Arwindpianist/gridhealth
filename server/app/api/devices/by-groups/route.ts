@@ -117,13 +117,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch devices' }, { status: 500 })
     }
 
-    // Get all assigned device IDs
-    const assignedDeviceIds = new Set()
-    formattedGroups.forEach(group => {
-      group.devices.forEach(device => {
-        assignedDeviceIds.add(device.device_id)
-      })
-    })
+         // Get all assigned device IDs
+     const assignedDeviceIds = new Set<string>()
+     formattedGroups.forEach(group => {
+       if (group.devices && Array.isArray(group.devices)) {
+         group.devices.forEach(device => {
+           if (device && device.device_id) {
+             assignedDeviceIds.add(device.device_id)
+           }
+         })
+       }
+     })
 
     // Filter out assigned devices to get unassigned ones
     const unassignedDevices = allDevices?.filter(device => !assignedDeviceIds.has(device.device_id)) || []
