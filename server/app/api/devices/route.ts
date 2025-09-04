@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    // Get devices for the organization with latest health metrics
+    // Get devices for the organization
     const { data: devices, error: devicesError } = await supabaseAdmin
       .from('devices')
       .select(`
@@ -45,19 +45,7 @@ export async function GET(request: NextRequest) {
         device_group_members!left(
           group:device_groups(name)
         ),
-        licenses!inner(organization_id),
-        health_metrics!inner(
-          id,
-          value,
-          timestamp,
-          metric_type,
-          performance_metrics,
-          disk_health,
-          memory_health,
-          network_health,
-          service_health,
-          security_health
-        )
+        licenses!inner(organization_id)
       `)
       .eq('licenses.organization_id', organizationId)
       .eq('is_active', true)
@@ -68,37 +56,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch devices' }, { status: 500 })
     }
 
-    // Format devices with latest health data and group information
+    // Format devices with group information
     const formattedDevices = devices?.map(device => {
-      // Get the latest health metrics for each metric type
-      const latestHealth = device.health_metrics?.[0]
-      const performanceMetrics = latestHealth?.performance_metrics || {}
-      const diskHealth = latestHealth?.disk_health || []
-      const memoryHealth = latestHealth?.memory_health || {}
-      const networkHealth = latestHealth?.network_health || {}
-      const serviceHealth = latestHealth?.service_health || []
-      const securityHealth = latestHealth?.security_health || {}
-
-      // Calculate overall health score from the latest health scan
-      const healthScan = device.health_metrics?.find((metric: any) => metric.metric_type === 'health_scan')
-      const healthScore = healthScan?.value || device.health_score || 100
-
       // Get group name from the device_group_members relationship
       const groupName = device.device_group_members?.[0]?.group?.name || null
 
       return {
         ...device,
         group_name: groupName,
-        health_score: healthScore,
-        performance_metrics: performanceMetrics,
-        disk_health: diskHealth,
-        memory_health: memoryHealth,
-        network_health: networkHealth,
-        service_health: serviceHealth,
-        security_health: securityHealth,
-        last_health_check: healthScan?.timestamp || device.last_health_check,
-        device_group_members: undefined, // Remove the raw group object
-        health_metrics: undefined // Remove the raw metrics array
+        health_score: device.health_score || 100,
+        performance_metrics: {},
+        disk_health: [],
+        memory_health: {},
+        network_health: {},
+        service_health: [],
+        security_health: {},
+        last_health_check: device.last_health_check,
+        device_group_members: undefined // Remove the raw group object
       }
     }) || []
 
