@@ -85,7 +85,7 @@ export default function GroupOverviewPage() {
 
   const fetchHealthMetrics = async (deviceIds: string[]) => {
     try {
-      const response = await fetch('/api/metrics', {
+      const response = await fetch('/api/health-metrics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ device_ids: deviceIds })
@@ -94,6 +94,8 @@ export default function GroupOverviewPage() {
       if (response.ok) {
         const data = await response.json()
         setHealthMetrics(data.metrics || [])
+      } else {
+        console.error('Failed to fetch health metrics:', response.status)
       }
     } catch (err) {
       console.error('Error fetching health metrics:', err)

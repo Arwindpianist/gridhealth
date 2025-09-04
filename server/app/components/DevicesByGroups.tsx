@@ -40,6 +40,36 @@ export default function DevicesByGroups({ initialGroups = [], initialUnassignedD
     fetchDevicesByGroups()
   }, [])
 
+  useEffect(() => {
+    if (groups.length > 0 || unassignedDevices.length > 0) {
+      fetchHealthMetrics()
+    }
+  }, [groups, unassignedDevices])
+
+  const fetchHealthMetrics = async () => {
+    try {
+      const allDeviceIds = [
+        ...groups.flatMap(group => group.devices.map(d => d.device_id)),
+        ...unassignedDevices.map(d => d.device_id)
+      ]
+      
+      if (allDeviceIds.length === 0) return
+
+      const response = await fetch('/api/health-metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_ids: allDeviceIds })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setHealthMetrics(data.metrics || [])
+      }
+    } catch (error) {
+      console.error('Error fetching health metrics:', error)
+    }
+  }
+
   const fetchDevicesByGroups = async () => {
     setIsLoading(true)
     try {
@@ -72,10 +102,11 @@ export default function DevicesByGroups({ initialGroups = [], initialUnassignedD
     }
   }
 
+  const [healthMetrics, setHealthMetrics] = useState<any[]>([])
+
   const getHealthScore = (device: Device) => {
-    // This would need to be fetched from health metrics API
-    // For now, return a placeholder
-    return 85
+    const metrics = healthMetrics.find(m => m.device_id === device.device_id)
+    return metrics?.health_score || 85
   }
 
   const isDeviceOnline = (device: Device) => {
@@ -203,9 +234,10 @@ export default function DevicesByGroups({ initialGroups = [], initialUnassignedD
                 </td>
               </tr>
             ) : (
-              currentDevices.map((device) => {
-                const healthScore = getHealthScore(device)
-                const isOnline = isDeviceOnline(device)
+                             currentDevices.map((device) => {
+                 const healthScore = getHealthScore(device)
+                 const isOnline = isDeviceOnline(device)
+                 const metrics = healthMetrics.find(m => m.device_id === device.device_id)
                 
                 return (
                   <tr key={device.device_id} className="hover:bg-dark-700/30 transition-all duration-200 group">
