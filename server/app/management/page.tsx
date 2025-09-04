@@ -53,6 +53,7 @@ export default function ManagementPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [showAddManagerModal, setShowAddManagerModal] = useState(false)
+  const [showEditManagerModal, setShowEditManagerModal] = useState(false)
   const [showAddGroupModal, setShowAddGroupModal] = useState(false)
   const [showAssignDevicesModal, setShowAssignDevicesModal] = useState(false)
   const [selectedGroup, setSelectedGroup] = useState<DeviceGroup | null>(null)
@@ -62,6 +63,7 @@ export default function ManagementPage() {
     permissions: { access_all: false, system_admin: false },
     group_access: []
   })
+  const [editingManager, setEditingManager] = useState<AccountManager | null>(null)
   const [newGroup, setNewGroup] = useState({
     name: '',
     description: '',
@@ -157,6 +159,37 @@ export default function ManagementPage() {
       }
     } catch (error) {
       console.error('Error adding manager:', error)
+      setManagerError('Network error. Please try again.')
+    }
+  }
+
+  const handleEditManager = async () => {
+    try {
+      if (!editingManager) return
+      
+      setManagerError('')
+      const response = await fetch('/api/account-managers', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          managerId: editingManager.id,
+          role: editingManager.role,
+          permissions: editingManager.permissions,
+          group_access: editingManager.group_access
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setShowEditManagerModal(false)
+        setEditingManager(null)
+        fetchData()
+      } else {
+        setManagerError(data.error || 'Failed to update manager')
+      }
+    } catch (error) {
+      console.error('Error updating manager:', error)
       setManagerError('Network error. Please try again.')
     }
   }
@@ -339,7 +372,15 @@ export default function ManagementPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button className="text-blue-400 hover:text-blue-300 mr-3">Edit</button>
+                          <button 
+                            onClick={() => {
+                              setEditingManager(manager)
+                              setShowEditManagerModal(true)
+                            }}
+                            className="text-blue-400 hover:text-blue-300 mr-3"
+                          >
+                            Edit
+                          </button>
                           <button className="text-red-400 hover:text-red-300">Remove</button>
                         </td>
                       </tr>
@@ -483,6 +524,122 @@ export default function ManagementPage() {
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 Add Manager
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Manager Modal */}
+      {showEditManagerModal && editingManager && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 rounded-lg max-w-lg w-full p-6">
+            <h3 className="text-xl font-bold text-white mb-4">Edit Account Manager</h3>
+            {managerError && (
+              <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-4">
+                <p className="text-red-300">{managerError}</p>
+              </div>
+            )}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">User</label>
+                <div className="w-full bg-dark-700 border border-dark-600 text-white rounded-lg px-3 py-2">
+                  {editingManager.user_email || editingManager.user_id}
+                </div>
+                <p className="text-xs text-dark-400 mt-1">User email cannot be changed</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">Role</label>
+                <select
+                  value={editingManager.role}
+                  onChange={(e) => setEditingManager({ ...editingManager, role: e.target.value })}
+                  className="w-full bg-dark-700 border border-dark-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                  <option value="viewer">Viewer</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </div>
+              <div className="flex items-center space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={editingManager.permissions?.access_all || false}
+                    onChange={(e) => setEditingManager({
+                      ...editingManager,
+                      permissions: { ...editingManager.permissions, access_all: e.target.checked }
+                    })}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-dark-300">Access All</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={editingManager.permissions?.system_admin || false}
+                    onChange={(e) => setEditingManager({
+                      ...editingManager,
+                      permissions: { ...editingManager.permissions, system_admin: e.target.checked }
+                    })}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-dark-300">System Admin</span>
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">Group Access</label>
+                <div className="text-xs text-dark-400 mb-2">
+                  Select specific groups this manager can access. Leave empty for "Access All" or select specific groups.
+                </div>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {deviceGroups.map((group) => (
+                    <label key={group.id} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={editingManager.group_access?.includes(group.name) || false}
+                        onChange={(e) => {
+                          const currentGroups = editingManager.group_access || []
+                          if (e.target.checked) {
+                            setEditingManager({
+                              ...editingManager,
+                              group_access: [...currentGroups, group.name]
+                            })
+                          } else {
+                            setEditingManager({
+                              ...editingManager,
+                              group_access: currentGroups.filter(g => g !== group.name)
+                            })
+                          }
+                        }}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-white">{group.name}</span>
+                      <span className="text-xs text-dark-400 ml-2">({group.device_count} devices)</span>
+                    </label>
+                  ))}
+                </div>
+                {deviceGroups.length === 0 && (
+                  <p className="text-sm text-yellow-400">No device groups available</p>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowEditManagerModal(false)
+                  setEditingManager(null)
+                  setManagerError('')
+                }}
+                className="bg-dark-700 hover:bg-dark-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditManager}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Update Manager
               </button>
             </div>
           </div>

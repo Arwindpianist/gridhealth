@@ -80,16 +80,25 @@ export async function GET(request: NextRequest) {
     // Filter groups based on user permissions
     let filteredGroups = groups || []
     
-    if (accountManager && !accountManager.permissions?.access_all) {
-      // If user has specific group access, filter by that
-      if (accountManager.group_access && accountManager.group_access.length > 0) {
-        filteredGroups = filteredGroups.filter(group => 
-          accountManager.group_access.includes(group.name)
-        )
-      } else {
-        // If no specific group access, show no groups
-        filteredGroups = []
+    // Check if user is an organization owner or admin (they see all groups)
+    const isOwnerOrAdmin = userRole.role === 'owner' || userRole.role === 'admin' || 
+                          (userRole.role === 'organization' && userRole.organization_id) ||
+                          (userRole.role === 'company' && userRole.company_id)
+    
+    if (!isOwnerOrAdmin && accountManager) {
+      // For account managers, check their permissions
+      if (!accountManager.permissions?.access_all) {
+        // If user has specific group access, filter by that
+        if (accountManager.group_access && accountManager.group_access.length > 0) {
+          filteredGroups = filteredGroups.filter(group => 
+            accountManager.group_access.includes(group.name)
+          )
+        } else {
+          // If no specific group access, show no groups
+          filteredGroups = []
+        }
       }
+      // If access_all is true, show all groups
     }
 
          // Format the response

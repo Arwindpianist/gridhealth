@@ -198,6 +198,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
+
+
 export async function PUT(request: NextRequest) {
   try {
     const { userId } = await auth()
@@ -207,10 +209,16 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { manager_id, role, permissions, group_access } = body
+    const { managerId, role, permissions, group_access } = body
 
-    if (!manager_id) {
+    if (!managerId) {
       return NextResponse.json({ error: 'Manager ID is required' }, { status: 400 })
+    }
+
+    // Validate role
+    const validRoles = ['owner', 'admin', 'manager', 'viewer']
+    if (role && !validRoles.includes(role)) {
+      return NextResponse.json({ error: 'Invalid role. Must be one of: owner, admin, manager, viewer' }, { status: 400 })
     }
 
     // Get user data
@@ -240,16 +248,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    // Verify user has permission to modify account managers (owner or admin only)
-    if (!['owner', 'admin'].includes(userRole.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    // Verify user has permission to edit account managers (owner, admin, or organization/company owner)
+    if (!['owner', 'admin'].includes(userRole.role) && 
+        !(userRole.role === 'organization' && userRole.organization_id) &&
+        !(userRole.role === 'company' && userRole.company_id)) {
+      return NextResponse.json({ error: 'Insufficient permissions. Only owners, admins, and organization/company owners can edit account managers.' }, { status: 403 })
     }
 
     // Get the account manager to update
     const { data: accountManager, error: managerError } = await supabaseAdmin
       .from('account_managers')
       .select('*')
-      .eq('id', manager_id)
+      .eq('id', managerId)
       .eq('organization_id', organizationId)
       .single()
 
@@ -257,33 +267,54 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Account manager not found' }, { status: 404 })
     }
 
-    // Prevent non-owners from modifying owners
+    // Prevent non-owners from editing other owners
     if (accountManager.role === 'owner' && userRole.role !== 'owner') {
-      return NextResponse.json({ error: 'Only organization owners can modify other owners' }, { status: 403 })
+      return NextResponse.json({ error: 'Only organization owners can edit other owners.' }, { status: 403 })
     }
 
-    // Prevent changing role to owner if user is not owner
+    // Prevent non-owners from promoting users to owner
     if (role === 'owner' && userRole.role !== 'owner') {
-      return NextResponse.json({ error: 'Only organization owners can create other owners' }, { status: 403 })
+      return NextResponse.json({ error: 'Only organization owners can promote users to owner.' }, { status: 403 })
     }
 
     // Update account manager
-    const updateData: any = {}
-    if (role) updateData.role = role
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+
+    if (role !== undefined) updateData.role = role
     if (permissions !== undefined) updateData.permissions = permissions
     if (group_access !== undefined) updateData.group_access = group_access
-    updateData.updated_at = new Date().toISOString()
 
     const { data: updatedManager, error: updateError } = await supabaseAdmin
       .from('account_managers')
       .update(updateData)
-      .eq('id', manager_id)
+      .eq('id', managerId)
       .select()
       .single()
 
     if (updateError) {
       console.error('Error updating account manager:', updateError)
       return NextResponse.json({ error: 'Failed to update account manager' }, { status: 500 })
+    }
+
+    // Update user role if role was changed
+    if (role && role !== accountManager.role) {
+      const { error: userRoleError } = await supabaseAdmin
+        .from('user_roles')
+        .upsert({
+          user_id: accountManager.user_id,
+          organization_id: organizationId,
+          role: role === 'owner' ? 'owner' : 'member', // Map to user_roles table
+          company_id: null
+        }, {
+          onConflict: 'user_id,organization_id'
+        })
+
+      if (userRoleError) {
+        console.error('Error updating user role:', userRoleError)
+        // Continue anyway as the account manager was updated
+      }
     }
 
     return NextResponse.json({
