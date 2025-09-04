@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
       .from('account_managers')
       .select(`
         *,
-        user:users(email, clerk_user_id),
-        created_by_user:users!account_managers_created_by_fkey(email)
+        user:users!fk_account_managers_user(email, clerk_user_id),
+        created_by_user:users!fk_account_managers_created_by(email)
       `)
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })

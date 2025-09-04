@@ -101,9 +101,7 @@ export async function POST(request: NextRequest) {
     // Add new assignments
     const assignments = device_ids.map(device_id => ({
       group_id,
-      device_id,
-      assigned_by: user.id,
-      assigned_at: new Date().toISOString()
+      device_id
     }))
 
     const { error: assignError } = await supabaseAdmin
