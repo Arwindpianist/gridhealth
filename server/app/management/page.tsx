@@ -24,16 +24,38 @@ interface DeviceGroup {
   created_at: string
 }
 
+interface AvailableLicense {
+  license_key: string
+  device_limit: number
+  status: string
+  payment_status: string
+}
+
+interface Device {
+  device_id: string
+  device_name: string
+  os_name: string
+  os_version: string
+  hostname: string
+  health_status: string
+  last_heartbeat: string
+  license_key: string
+}
+
 export default function ManagementPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'managers' | 'groups'>('managers')
   const [accountManagers, setAccountManagers] = useState<AccountManager[]>([])
   const [deviceGroups, setDeviceGroups] = useState<DeviceGroup[]>([])
+  const [availableLicenses, setAvailableLicenses] = useState<AvailableLicense[]>([])
+  const [availableDevices, setAvailableDevices] = useState<Device[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [showAddManagerModal, setShowAddManagerModal] = useState(false)
   const [showAddGroupModal, setShowAddGroupModal] = useState(false)
+  const [showAssignDevicesModal, setShowAssignDevicesModal] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState<DeviceGroup | null>(null)
   const [newManager, setNewManager] = useState({
     email: '',
     role: 'manager',
@@ -45,6 +67,8 @@ export default function ManagementPage() {
     description: '',
     license_key: ''
   })
+  const [selectedDevices, setSelectedDevices] = useState<string[]>([])
+  const [managerError, setManagerError] = useState('')
 
   useEffect(() => {
     if (isLoaded && user) {
@@ -83,7 +107,7 @@ export default function ManagementPage() {
       const managersResponse = await fetch('/api/account-managers')
       if (managersResponse.ok) {
         const managersData = await managersResponse.json()
-        setAccountManagers(managersData.managers || [])
+        setAccountManagers(managersData.accountManagers || [])
       }
 
       // Fetch device groups
@@ -91,6 +115,20 @@ export default function ManagementPage() {
       if (groupsResponse.ok) {
         const groupsData = await groupsResponse.json()
         setDeviceGroups(groupsData.groups || [])
+      }
+
+      // Fetch available licenses
+      const licensesResponse = await fetch('/api/licenses/available')
+      if (licensesResponse.ok) {
+        const licensesData = await licensesResponse.json()
+        setAvailableLicenses(licensesData.licenses || [])
+      }
+
+      // Fetch available devices
+      const devicesResponse = await fetch('/api/devices')
+      if (devicesResponse.ok) {
+        const devicesData = await devicesResponse.json()
+        setAvailableDevices(devicesData.devices || [])
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -101,19 +139,25 @@ export default function ManagementPage() {
 
   const handleAddManager = async () => {
     try {
+      setManagerError('')
       const response = await fetch('/api/account-managers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newManager)
       })
 
+      const data = await response.json()
+
       if (response.ok) {
         setShowAddManagerModal(false)
         setNewManager({ email: '', role: 'manager', permissions: { access_all: false, system_admin: false }, group_access: [] })
         fetchData()
+      } else {
+        setManagerError(data.error || 'Failed to add manager')
       }
     } catch (error) {
       console.error('Error adding manager:', error)
+      setManagerError('Network error. Please try again.')
     }
   }
 
@@ -135,12 +179,45 @@ export default function ManagementPage() {
     }
   }
 
+  const handleAssignDevices = async () => {
+    try {
+      if (!selectedGroup || selectedDevices.length === 0) return
+
+      const response = await fetch('/api/device-groups/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group_id: selectedGroup.id,
+          device_ids: selectedDevices
+        })
+      })
+
+      if (response.ok) {
+        setShowAssignDevicesModal(false)
+        setSelectedGroup(null)
+        setSelectedDevices([])
+        fetchData()
+      }
+    } catch (error) {
+      console.error('Error assigning devices:', error)
+    }
+  }
+
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'owner': return 'bg-red-600'
       case 'admin': return 'bg-purple-600'
       case 'manager': return 'bg-blue-600'
       case 'viewer': return 'bg-gray-600'
+      default: return 'bg-gray-600'
+    }
+  }
+
+  const getHealthColor = (status: string) => {
+    switch (status) {
+      case 'healthy': return 'bg-green-600'
+      case 'warning': return 'bg-yellow-600'
+      case 'critical': return 'bg-red-600'
       default: return 'bg-gray-600'
     }
   }
@@ -310,8 +387,14 @@ export default function ManagementPage() {
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                      Manage Devices
+                    <button 
+                      onClick={() => {
+                        setSelectedGroup(group)
+                        setShowAssignDevicesModal(true)
+                      }}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors"
+                    >
+                      Assign Devices
                     </button>
                     <button className="bg-dark-700 hover:bg-dark-600 text-white px-3 py-2 rounded text-sm transition-colors">
                       Edit
@@ -329,6 +412,11 @@ export default function ManagementPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-dark-800 rounded-lg max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-white mb-4">Add Account Manager</h3>
+            {managerError && (
+              <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-4">
+                <p className="text-red-300">{managerError}</p>
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-2">Email</label>
@@ -339,6 +427,7 @@ export default function ManagementPage() {
                   className="w-full bg-dark-700 border border-dark-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="user@example.com"
                 />
+                <p className="text-xs text-dark-400 mt-1">User must already have a GridHealth account</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-2">Role</label>
@@ -381,7 +470,10 @@ export default function ManagementPage() {
             </div>
             <div className="flex justify-end space-x-3 mt-6">
               <button
-                onClick={() => setShowAddManagerModal(false)}
+                onClick={() => {
+                  setShowAddManagerModal(false)
+                  setManagerError('')
+                }}
                 className="bg-dark-700 hover:bg-dark-600 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 Cancel
@@ -425,13 +517,23 @@ export default function ManagementPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-2">License Key</label>
-                <input
-                  type="text"
+                <select
                   value={newGroup.license_key}
                   onChange={(e) => setNewGroup({ ...newGroup, license_key: e.target.value })}
                   className="w-full bg-dark-700 border border-dark-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter license key"
-                />
+                >
+                  <option value="">Select a license key</option>
+                  {availableLicenses.map((license) => (
+                    <option key={license.license_key} value={license.license_key}>
+                      {license.license_key} ({license.device_limit} devices)
+                    </option>
+                  ))}
+                </select>
+                {availableLicenses.length === 0 && (
+                  <p className="text-sm text-yellow-400 mt-1">
+                    No active licenses available. Please contact an administrator.
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex justify-end space-x-3 mt-6">
@@ -443,9 +545,82 @@ export default function ManagementPage() {
               </button>
               <button
                 onClick={handleAddGroup}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                disabled={!newGroup.license_key}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 Add Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Devices Modal */}
+      {showAssignDevicesModal && selectedGroup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 rounded-lg max-w-4xl w-full p-6 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-white mb-4">
+              Assign Devices to "{selectedGroup.name}"
+            </h3>
+            <p className="text-dark-300 mb-4">
+              Select devices that use license key: <span className="font-mono text-white">{selectedGroup.license_key}</span>
+            </p>
+            
+            <div className="space-y-4">
+              {availableDevices
+                .filter(device => device.license_key === selectedGroup.license_key)
+                .map((device) => (
+                  <div key={device.device_id} className="flex items-center space-x-3 p-3 bg-dark-700 rounded-lg">
+                    <input
+                      type="checkbox"
+                      checked={selectedDevices.includes(device.device_id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedDevices([...selectedDevices, device.device_id])
+                        } else {
+                          setSelectedDevices(selectedDevices.filter(id => id !== device.device_id))
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-white font-medium">{device.device_name || device.hostname}</span>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white ${getHealthColor(device.health_status)}`}>
+                          {device.health_status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-dark-400">
+                        {device.os_name} {device.os_version} • {device.hostname}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {availableDevices.filter(device => device.license_key === selectedGroup.license_key).length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-dark-300">No devices found using this license key.</p>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowAssignDevicesModal(false)
+                  setSelectedGroup(null)
+                  setSelectedDevices([])
+                }}
+                className="bg-dark-700 hover:bg-dark-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignDevices}
+                disabled={selectedDevices.length === 0}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Assign {selectedDevices.length} Device{selectedDevices.length !== 1 ? 's' : ''}
               </button>
             </div>
           </div>

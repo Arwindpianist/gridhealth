@@ -182,10 +182,10 @@ For support, contact: support@gridhealth.arwindpianist.store`
             </div>
             <div className="flex space-x-4">
               <Link 
-                href="/pricing" 
+                href="/enquiry" 
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
-                Purchase New License
+                Request New License
               </Link>
               <Link 
                 href="/dashboard" 
@@ -242,25 +242,14 @@ For support, contact: support@gridhealth.arwindpianist.store`
                 </svg>
                 <h3 className="mt-2 text-sm font-medium text-dark-300">No licenses yet</h3>
                 <p className="mt-1 text-sm text-dark-400">
-                  {organization?.name === 'Individual Account' 
-                    ? 'Complete your profile and purchase your first GridHealth monitoring license to get started.'
-                    : 'Get started by purchasing your first GridHealth monitoring license.'
-                  }
+                  Get started by requesting your first GridHealth monitoring license.
                 </p>
-                <div className="mt-6 space-x-4">
-                  {organization?.name === 'Individual Account' && (
-                    <Link 
-                      href="/profile" 
-                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700"
-                    >
-                      Complete Profile First
-                    </Link>
-                  )}
+                <div className="mt-6">
                   <Link 
-                    href="/pricing" 
+                    href="/enquiry" 
                     className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                   >
-                    Purchase License
+                    Request License
                   </Link>
                 </div>
               </div>
@@ -349,7 +338,7 @@ For support, contact: support@gridhealth.arwindpianist.store`
               </Link>
 
               <Link 
-                href="/pricing" 
+                href="/enquiry" 
                 className="flex items-center p-4 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors"
               >
                 <div className="p-2 bg-green-600 rounded-lg mr-4">
@@ -358,8 +347,8 @@ For support, contact: support@gridhealth.arwindpianist.store`
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-white">Purchase License</h3>
-                  <p className="text-sm text-dark-400">Buy a new monitoring license</p>
+                  <h3 className="text-sm font-medium text-white">Request License</h3>
+                  <p className="text-sm text-dark-400">Submit a license request</p>
                 </div>
               </Link>
 
