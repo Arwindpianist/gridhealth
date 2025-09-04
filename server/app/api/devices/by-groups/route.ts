@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         created_at,
         devices:device_group_members(
           device_id,
-          assigned_at,
+          added_at,
           device:devices(
             device_id,
             device_name,
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
             os_version,
             hostname,
             health_status,
-            last_heartbeat,
+            last_seen,
             license_key
           )
         )
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
        created_at: group.created_at,
        devices: group.devices?.map((d: any) => ({
          ...d.device,
-         assigned_at: d.assigned_at
+         assigned_at: d.added_at
        })) || [],
        device_count: group.devices?.length || 0
      }))
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
          os_version, 
          hostname, 
          health_status, 
-         last_heartbeat, 
+         last_seen, 
          license_key,
          licenses!inner(organization_id)
        `)

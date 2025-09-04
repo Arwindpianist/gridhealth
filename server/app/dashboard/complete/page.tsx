@@ -186,22 +186,13 @@ export default async function CompleteDashboardPage() {
                 Profile
               </Link>
               <Link 
-                href="/licenses" 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105"
-              >
-                <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-                Licenses
-              </Link>
-              <Link 
                 href="/download" 
                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105"
               >
                 <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Download
+                Download Agent
               </Link>
               {/* Show Management button for admin/owner users */}
               {(roles.some(r => r.role === 'admin') || roles.some(r => r.role === 'owner') || 
@@ -217,16 +208,42 @@ export default async function CompleteDashboardPage() {
                   Management
                 </Link>
               )}
-              {/* Show Request License button */}
-              <Link 
-                href="/enquiry" 
-                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105"
-              >
-                <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Request License
-              </Link>
+              {/* License Management dropdown */}
+              <div className="relative group">
+                <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105 flex items-center">
+                  <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                  Licenses
+                  <svg className="w-4 h-4 ml-2 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="absolute right-0 mt-2 w-48 bg-dark-800 border border-dark-600 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <Link 
+                    href="/licenses" 
+                    className="block px-4 py-3 text-sm text-white hover:bg-dark-700 rounded-t-lg transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      View Licenses
+                    </div>
+                  </Link>
+                  <Link 
+                    href="/enquiry" 
+                    className="block px-4 py-3 text-sm text-white hover:bg-dark-700 rounded-b-lg transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Request New License
+                    </div>
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -234,13 +251,13 @@ export default async function CompleteDashboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-2xl border border-blue-500/30 p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-blue-300 text-sm font-medium">Total Devices</p>
                 <p className="text-2xl font-bold text-white">{totalDevices}</p>
-                <p className="text-blue-300 text-sm">{onlineDevices} online</p>
+                <p className="text-blue-300 text-sm">{onlineDevices} online • {offlineDevices} offline</p>
               </div>
               <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,9 +270,9 @@ export default async function CompleteDashboardPage() {
           <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-2xl border border-green-500/30 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-300 text-sm font-medium">Health Score</p>
+                <p className="text-green-300 text-sm font-medium">System Health</p>
                 <p className="text-2xl font-bold text-white">{averageHealthScore}%</p>
-                <p className="text-green-300 text-sm">{healthyDevices} healthy</p>
+                <p className="text-green-300 text-sm">{healthyDevices} healthy • {warningDevices} warning</p>
               </div>
               <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,27 +282,12 @@ export default async function CompleteDashboardPage() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-2xl border border-purple-500/30 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-300 text-sm font-medium">Licenses</p>
-                <p className="text-2xl font-bold text-white">{totalLicenses}</p>
-                <p className="text-purple-300 text-sm">{availableDevices} available</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
           <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-2xl border border-orange-500/30 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-orange-300 text-sm font-medium">Alerts</p>
-                <p className="text-2xl font-bold text-white">{warningDevices + criticalDevices}</p>
-                <p className="text-orange-300 text-sm">{criticalDevices} critical</p>
+                <p className="text-orange-300 text-sm font-medium">Critical Alerts</p>
+                <p className="text-2xl font-bold text-white">{criticalDevices}</p>
+                <p className="text-orange-300 text-sm">{warningDevices + criticalDevices} total alerts</p>
               </div>
               <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -302,7 +304,7 @@ export default async function CompleteDashboardPage() {
         {/* Quick Actions */}
         <div className="mt-8 bg-gradient-to-br from-dark-800 to-dark-700 rounded-2xl border border-dark-600/50 p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link 
               href="/download" 
               className="flex items-center p-4 bg-dark-700/50 rounded-xl hover:bg-dark-600/50 transition-all duration-200 hover:scale-105 group border border-dark-600/50 hover:border-blue-500/50"
@@ -314,22 +316,7 @@ export default async function CompleteDashboardPage() {
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">Download Agent</h4>
-                <p className="text-sm text-dark-400">Get the GridHealth monitoring agent</p>
-              </div>
-            </Link>
-
-            <Link 
-              href="/licenses" 
-              className="flex items-center p-4 bg-dark-700/50 rounded-xl hover:bg-dark-600/50 transition-all duration-200 hover:scale-105 group border border-dark-600/50 hover:border-purple-500/50"
-            >
-              <div className="p-3 bg-purple-500/20 rounded-lg mr-4 group-hover:bg-purple-500/30 transition-all">
-                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-white group-hover:text-purple-400 transition-colors">Manage Licenses</h4>
-                <p className="text-sm text-dark-400">View and manage your licenses</p>
+                <p className="text-sm text-dark-400">Get the GridHealth monitoring agent for your devices</p>
               </div>
             </Link>
 
@@ -343,8 +330,8 @@ export default async function CompleteDashboardPage() {
                 </svg>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-white group-hover:text-green-400 transition-colors">Edit Profile</h4>
-                <p className="text-sm text-dark-400">Update your account settings</p>
+                <h4 className="text-sm font-medium text-white group-hover:text-green-400 transition-colors">Account Settings</h4>
+                <p className="text-sm text-dark-400">Manage your profile and preferences</p>
               </div>
             </Link>
           </div>
