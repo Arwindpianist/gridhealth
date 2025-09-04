@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseAdmin } from '../../../../lib/supabase'
+import { getDeviceHealthData } from '../../../../lib/healthMetrics'
 
 import HealthMetricsDisplay from '../../../components/HealthMetricsDisplay'
 
@@ -36,43 +37,34 @@ export default async function DevicePage({ params }: DevicePageProps) {
     redirect('/dashboard')
   }
 
-  // Get device health data using the health metrics API
-  const healthMetricsResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/health-metrics`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ device_ids: [deviceId] })
-  })
+  // Get comprehensive health data using the working function
+  const healthData = await getDeviceHealthData(deviceId)
+  
+  console.log('Health data for device:', healthData)
 
-  let healthMetrics = []
-  if (healthMetricsResponse.ok) {
-    const healthData = await healthMetricsResponse.json()
-    healthMetrics = healthData.metrics || []
-    console.log('Health metrics received:', healthMetrics)
-  } else {
-    console.error('Failed to fetch health metrics:', healthMetricsResponse.status, healthMetricsResponse.statusText)
-  }
-
-  // Get the latest health metrics for this device
-  const latestMetrics = healthMetrics[0] || {
+  // Extract metrics from the health data with null safety
+  const latestMetrics = {
     device_id: deviceId,
-    health_score: 100,
-    cpu_usage: 0,
-    memory_usage: 0,
-    disk_usage: 0,
-    network_status: 'unknown',
-    performance_score: 100,
-    disk_score: 100,
-    memory_score: 100,
-    network_score: 100,
-    services_score: 100,
-    security_score: 100,
+    health_score: healthData?.health_score?.overall || 100,
+    cpu_usage: healthData?.health_score?.details?.performance?.cpu_usage_percent || 0,
+    memory_usage: healthData?.health_score?.details?.memory?.memory_usage_percent || 0,
+    disk_usage: healthData?.latest_health_scan?.disk_health?.length > 0 ? 
+      Math.max(...(healthData?.latest_health_scan?.disk_health?.map((disk: any) => disk.usage_percent || 0) || [])) : 0,
+    network_status: healthData?.health_score?.details?.network?.internet_connectivity ? 'connected' : 'disconnected',
+    // Individual health scores
+    performance_score: healthData?.health_score?.performance || 100,
+    disk_score: healthData?.health_score?.disk || 100,
+    memory_score: healthData?.health_score?.memory || 100,
+    network_score: healthData?.health_score?.network || 100,
+    services_score: healthData?.health_score?.services || 100,
+    security_score: healthData?.health_score?.security || 100,
     // Additional data fields
-    performance_metrics: {},
-    disk_health: [],
-    memory_health: {},
-    network_health: {},
-    service_health: [],
-    security_health: {}
+    performance_metrics: healthData?.health_score?.details?.performance || {},
+    disk_health: healthData?.health_score?.details?.disk || [],
+    memory_health: healthData?.health_score?.details?.memory || {},
+    network_health: healthData?.health_score?.details?.network || {},
+    service_health: healthData?.health_score?.details?.services || [],
+    security_health: healthData?.health_score?.details?.security || {}
   }
   
   console.log('Latest metrics for device:', latestMetrics)
