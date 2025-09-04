@@ -10,7 +10,7 @@ interface Device {
   os_version: string
   hostname: string
   health_status: string
-  last_heartbeat: string
+  last_seen: string
   license_key: string
   assigned_at?: string
 }
@@ -79,11 +79,11 @@ export default function DevicesByGroups({ initialGroups = [], initialUnassignedD
   }
 
   const isDeviceOnline = (device: Device) => {
-    if (!device.last_heartbeat) return false
-    const lastHeartbeat = new Date(device.last_heartbeat)
+    if (!device.last_seen) return false
+    const lastSeen = new Date(device.last_seen)
     const now = new Date()
-    const minutesSinceLastHeartbeat = (now.getTime() - lastHeartbeat.getTime()) / (1000 * 60)
-    return minutesSinceLastHeartbeat <= 5
+    const minutesSinceLastSeen = (now.getTime() - lastSeen.getTime()) / (1000 * 60)
+    return minutesSinceLastSeen <= 5
   }
 
   const allTabs = [
@@ -271,14 +271,14 @@ export default function DevicesByGroups({ initialGroups = [], initialUnassignedD
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-white">
-                        {device.last_heartbeat ? new Date(device.last_heartbeat).toLocaleDateString() : 'Never'}
+                        {device.last_seen ? new Date(device.last_seen).toLocaleDateString() : 'Never'}
                       </div>
-                      {device.last_heartbeat && (
+                      {device.last_seen && (
                         <div className="text-xs text-dark-400">
                           {(() => {
-                            const lastHeartbeat = new Date(device.last_heartbeat)
+                            const lastSeen = new Date(device.last_seen)
                             const now = new Date()
-                            const diffMs = now.getTime() - lastHeartbeat.getTime()
+                            const diffMs = now.getTime() - lastSeen.getTime()
                             const diffMins = Math.floor(diffMs / (1000 * 60))
                             const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
                             const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
