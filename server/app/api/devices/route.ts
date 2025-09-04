@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
         device_group_members!left(
           group:device_groups(name)
         ),
+        licenses!inner(organization_id),
         health_metrics!inner(
           id,
           value,
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
           security_health
         )
       `)
-      .eq('organization_id', organizationId)
+      .eq('licenses.organization_id', organizationId)
       .eq('is_active', true)
       .order('device_name')
 

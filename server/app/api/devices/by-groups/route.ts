@@ -109,8 +109,18 @@ export async function GET(request: NextRequest) {
      // Get unassigned devices (devices that belong to the organization but aren't in any group)
      const { data: allDevices, error: devicesError } = await supabaseAdmin
        .from('devices')
-       .select('device_id, device_name, os_name, os_version, hostname, health_status, last_heartbeat, license_key')
-       .eq('organization_id', organizationId)
+       .select(`
+         device_id, 
+         device_name, 
+         os_name, 
+         os_version, 
+         hostname, 
+         health_status, 
+         last_heartbeat, 
+         license_key,
+         licenses!inner(organization_id)
+       `)
+       .eq('licenses.organization_id', organizationId)
 
      if (devicesError) {
        console.error('Error fetching devices:', devicesError)
