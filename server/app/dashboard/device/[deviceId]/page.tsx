@@ -65,7 +65,14 @@ export default async function DevicePage({ params }: DevicePageProps) {
     memory_score: 100,
     network_score: 100,
     services_score: 100,
-    security_score: 100
+    security_score: 100,
+    // Additional data fields
+    performance_metrics: {},
+    disk_health: [],
+    memory_health: {},
+    network_health: {},
+    service_health: [],
+    security_health: {}
   }
   
   console.log('Latest metrics for device:', latestMetrics)
@@ -340,7 +347,7 @@ export default async function DevicePage({ params }: DevicePageProps) {
           </div>
         </div>
 
-        {/* Real-time Performance Metrics */}
+        {/* Detailed Health Information */}
         <div className="bg-gradient-to-br from-dark-800 to-dark-700 rounded-2xl border border-dark-600/50 p-6 mb-8 hover:border-dark-500/50 transition-all duration-300 hover:shadow-xl">
           <div className="flex items-center space-x-3 mb-6">
             <div className="p-3 bg-blue-500/20 rounded-xl">
@@ -348,54 +355,208 @@ export default async function DevicePage({ params }: DevicePageProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-white">Real-time Performance Metrics</h2>
+            <h2 className="text-xl font-semibold text-white">Detailed Health Information</h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-dark-700/50 rounded-xl border border-dark-600/30 hover:border-blue-500/50 transition-all duration-200 hover:scale-105 group">
-              <div className="p-3 bg-blue-500/20 rounded-lg mb-3 group-hover:bg-blue-500/30 transition-all">
-                <svg className="w-6 h-6 text-blue-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                </svg>
+          
+          {/* Performance Metrics */}
+          {latestMetrics.performance_metrics && (
+            <div className="mb-8">
+              <h3 className="text-lg font-medium text-white mb-4">Performance Metrics</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-dark-700/50 rounded-xl border border-dark-600/30">
+                  <div className="text-2xl font-bold text-white">
+                    {latestMetrics.cpu_usage}%
+                  </div>
+                  <div className="text-sm text-gray-400 font-medium">CPU Usage</div>
+                </div>
+                <div className="text-center p-4 bg-dark-700/50 rounded-xl border border-dark-600/30">
+                  <div className="text-2xl font-bold text-white">
+                    {latestMetrics.memory_usage}%
+                  </div>
+                  <div className="text-sm text-gray-400 font-medium">Memory Usage</div>
+                </div>
+                <div className="text-center p-4 bg-dark-700/50 rounded-xl border border-dark-600/30">
+                  <div className="text-2xl font-bold text-white">
+                    {latestMetrics.performance_metrics.process_count || 0}
+                  </div>
+                  <div className="text-sm text-gray-400 font-medium">Processes</div>
+                </div>
+                <div className="text-center p-4 bg-dark-700/50 rounded-xl border border-dark-600/30">
+                  <div className="text-2xl font-bold text-white">
+                    {latestMetrics.performance_metrics.thread_count || 0}
+                  </div>
+                  <div className="text-sm text-gray-400 font-medium">Threads</div>
+                </div>
               </div>
-              <div className="text-2xl font-bold text-white group-hover:text-blue-400 transition-colors">
-                {latestMetrics.cpu_usage}%
-              </div>
-              <div className="text-sm text-gray-400 font-medium">CPU Usage</div>
             </div>
-            <div className="text-center p-4 bg-dark-700/50 rounded-xl border border-dark-600/30 hover:border-purple-500/50 transition-all duration-200 hover:scale-105 group">
-              <div className="p-3 bg-purple-500/20 rounded-lg mb-3 group-hover:bg-purple-500/30 transition-all">
-                <svg className="w-6 h-6 text-purple-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
+          )}
+
+          {/* Disk Health */}
+          {latestMetrics.disk_health && latestMetrics.disk_health.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg font-medium text-white mb-4">Disk Health</h3>
+              <div className="space-y-3">
+                {latestMetrics.disk_health.map((disk: any, index: number) => (
+                  <div key={index} className="p-4 bg-dark-700/50 rounded-lg border border-dark-600/30">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-white font-medium">Drive {disk.drive_letter}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        disk.health_status === 'Healthy' ? 'bg-green-600 text-white' :
+                        disk.health_status === 'Warning' ? 'bg-yellow-600 text-white' : 'bg-red-600 text-white'
+                      }`}>
+                        {disk.health_status}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <span className="text-gray-400">Free:</span>
+                        <div className="text-white font-medium">
+                          {((disk.free_space_bytes / (1024 * 1024 * 1024))).toFixed(1)} GB
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Free %:</span>
+                        <div className="text-white font-medium">{disk.free_space_percent?.toFixed(1)}%</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Total:</span>
+                        <div className="text-white font-medium">
+                          {((disk.total_size_bytes / (1024 * 1024 * 1024))).toFixed(1)} GB
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-full bg-dark-600 rounded-full h-2 mt-2">
+                      <div 
+                        className="h-2 bg-blue-500 rounded-full"
+                        style={{ width: `${100 - (disk.free_space_percent || 0)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="text-2xl font-bold text-white group-hover:text-purple-400 transition-colors">
-                {latestMetrics.memory_usage}%
-              </div>
-              <div className="text-sm text-gray-400 font-medium">Memory Usage</div>
             </div>
-            <div className="text-center p-4 bg-dark-700/50 rounded-xl border border-dark-600/30 hover:border-green-500/50 transition-all duration-200 hover:scale-105 group">
-              <div className="p-3 bg-green-500/20 rounded-lg mb-3 group-hover:bg-green-500/30 transition-all">
-                <svg className="w-6 h-6 text-green-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-                </svg>
+          )}
+
+          {/* Memory Health */}
+          {latestMetrics.memory_health && (
+            <div className="mb-8">
+              <h3 className="text-lg font-medium text-white mb-4">Memory Health</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {latestMetrics.memory_health.memory_usage_percent?.toFixed(1) || 0}%
+                  </div>
+                  <div className="text-xs text-gray-400">Usage</div>
+                </div>
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {((latestMetrics.memory_health.available_physical_memory_bytes / (1024 * 1024 * 1024))).toFixed(1)} GB
+                  </div>
+                  <div className="text-xs text-gray-400">Available</div>
+                </div>
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {((latestMetrics.memory_health.total_physical_memory_bytes / (1024 * 1024 * 1024))).toFixed(1)} GB
+                  </div>
+                  <div className="text-xs text-gray-400">Total</div>
+                </div>
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {latestMetrics.memory_health.memory_pressure_level || 'Normal'}
+                  </div>
+                  <div className="text-xs text-gray-400">Pressure</div>
+                </div>
               </div>
-              <div className="text-2xl font-bold text-white group-hover:text-green-400 transition-colors">
-                {latestMetrics.disk_usage}%
-              </div>
-              <div className="text-sm text-gray-400 font-medium">Disk Usage</div>
             </div>
-            <div className="text-center p-4 bg-dark-700/50 rounded-xl border border-dark-600/30 hover:border-yellow-500/50 transition-all duration-200 hover:scale-105 group">
-              <div className="p-3 bg-yellow-500/20 rounded-lg mb-3 group-hover:bg-yellow-500/30 transition-all">
-                <svg className="w-6 h-6 text-yellow-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                </svg>
+          )}
+
+          {/* Network Health */}
+          {latestMetrics.network_health && (
+            <div className="mb-8">
+              <h3 className="text-lg font-medium text-white mb-4">Network Health</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {latestMetrics.network_health.active_connections || 0}
+                  </div>
+                  <div className="text-xs text-gray-400">Connections</div>
+                </div>
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {latestMetrics.network_health.network_adapter_count || 0}
+                  </div>
+                  <div className="text-xs text-gray-400">Adapters</div>
+                </div>
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {latestMetrics.network_health.internet_connectivity ? '✅' : '❌'}
+                  </div>
+                  <div className="text-xs text-gray-400">Internet</div>
+                </div>
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {latestMetrics.network_health.dns_servers?.length || 0}
+                  </div>
+                  <div className="text-xs text-gray-400">DNS</div>
+                </div>
               </div>
-              <div className="text-2xl font-bold text-white group-hover:text-yellow-400 transition-colors">
-                {latestMetrics.network_status}
-              </div>
-              <div className="text-sm text-gray-400 font-medium">Network Status</div>
             </div>
-          </div>
+          )}
+
+          {/* Service Health */}
+          {latestMetrics.service_health && latestMetrics.service_health.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg font-medium text-white mb-4">Service Health</h3>
+              <div className="space-y-2">
+                {latestMetrics.service_health.slice(0, 5).map((service: any, index: number) => (
+                  <div key={index} className="flex justify-between items-center p-2 bg-dark-700 rounded-lg">
+                    <div>
+                      <span className="text-white font-medium text-sm">{service.display_name}</span>
+                      <div className="text-xs text-gray-400">{service.service_name}</div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        service.status === 'Running' ? 'bg-green-600 text-white' :
+                        service.status === 'Stopped' ? 'bg-red-600 text-white' : 'bg-yellow-600 text-white'
+                      }`}>
+                        {service.status}
+                      </span>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {service.startup_type}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Security Health */}
+          {latestMetrics.security_health && (
+            <div>
+              <h3 className="text-lg font-medium text-white mb-4">Security Health</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {latestMetrics.security_health.uac_enabled ? '✅' : '❌'}
+                  </div>
+                  <div className="text-xs text-gray-400">UAC Enabled</div>
+                </div>
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {latestMetrics.security_health.security_updates_available || 0}
+                  </div>
+                  <div className="text-xs text-gray-400">Updates Available</div>
+                </div>
+                <div className="text-center p-3 bg-dark-700 rounded-lg">
+                  <div className="text-xl font-bold text-white">
+                    {latestMetrics.security_health.antivirus_status || 'Unknown'}
+                  </div>
+                  <div className="text-xs text-gray-400">Antivirus</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Additional device information can be added here */}

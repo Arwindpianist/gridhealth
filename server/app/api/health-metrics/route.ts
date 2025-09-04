@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    // Get device information to determine online status and generate realistic metrics
+    // Get device information
     const { data: devices, error: devicesError } = await supabaseAdmin
       .from('devices')
       .select('device_id, last_seen, health_status')
@@ -54,8 +54,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch device information' }, { status: 500 })
     }
 
-    // Generate realistic health metrics based on device status
-    const processedMetrics = (devices || []).map(device => {
+    // Process each device to get real health metrics
+    const processedMetrics = await Promise.all((devices || []).map(async (device) => {
+      console.log(`Processing device ${device.device_id}: last_seen=${device.last_seen}`)
+
+      // Determine if device is online
       const isOnline = device.last_seen ? (() => {
         const lastSeen = new Date(device.last_seen)
         const now = new Date()
@@ -63,16 +66,92 @@ export async function POST(request: NextRequest) {
         return minutesSinceLastSeen <= 5
       })() : false
 
-      console.log(`Processing device ${device.device_id}: online=${isOnline}, last_seen=${device.last_seen}`)
+      // Get the latest comprehensive health scan for this device
+      const { data: latestHealthScan } = await supabaseAdmin
+        .from('health_metrics')
+        .select('*')
+        .eq('device_id', device.device_id)
+        .eq('metric_type', 'health_scan')
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single()
 
-      // Generate realistic metrics based on online status
-      let healthScore = 100
-      let cpuUsage = 0
-      let memoryUsage = 0
-      let diskUsage = 0
-      let networkStatus = 'unknown'
+      // Get the latest performance metrics
+      const { data: latestPerformance } = await supabaseAdmin
+        .from('health_metrics')
+        .select('*')
+        .eq('device_id', device.device_id)
+        .eq('metric_type', 'performance')
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single()
 
-      // Individual health scores
+      // Get the latest disk health
+      const { data: latestDisk } = await supabaseAdmin
+        .from('health_metrics')
+        .select('*')
+        .eq('device_id', device.device_id)
+        .eq('metric_type', 'disk_health')
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single()
+
+      // Get the latest memory health
+      const { data: latestMemory } = await supabaseAdmin
+        .from('health_metrics')
+        .select('*')
+        .eq('device_id', device.device_id)
+        .eq('metric_type', 'memory_health')
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single()
+
+      // Get the latest network health
+      const { data: latestNetwork } = await supabaseAdmin
+        .from('health_metrics')
+        .select('*')
+        .eq('device_id', device.device_id)
+        .eq('metric_type', 'network_health')
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single()
+
+      // Get the latest service health
+      const { data: latestServices } = await supabaseAdmin
+        .from('health_metrics')
+        .select('*')
+        .eq('device_id', device.device_id)
+        .eq('metric_type', 'service_health')
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single()
+
+      // Get the latest security health
+      const { data: latestSecurity } = await supabaseAdmin
+        .from('health_metrics')
+        .select('*')
+        .eq('device_id', device.device_id)
+        .eq('metric_type', 'security_health')
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single()
+
+      // Extract real metrics from the latest health scan
+      const performanceMetrics = latestHealthScan?.performance_metrics || latestPerformance?.performance_metrics || {}
+      const diskHealth = latestHealthScan?.disk_health || latestDisk?.disk_health || []
+      const memoryHealth = latestHealthScan?.memory_health || latestMemory?.memory_health || {}
+      const networkHealth = latestHealthScan?.network_health || latestNetwork?.network_health || {}
+      const serviceHealth = latestHealthScan?.service_health || latestServices?.service_health || []
+      const securityHealth = latestHealthScan?.security_health || latestSecurity?.security_health || {}
+
+      // Calculate real metrics from actual data
+      const cpuUsage = performanceMetrics?.cpu_usage_percent || 0
+      const memoryUsage = performanceMetrics?.memory_usage_percent || memoryHealth?.memory_usage_percent || 0
+      const diskUsage = diskHealth?.length > 0 ? 
+        Math.max(...diskHealth.map((disk: any) => disk.usage_percent || 0)) : 0
+      const networkStatus = networkHealth?.internet_connectivity ? 'connected' : 'disconnected'
+
+      // Calculate individual health scores based on real data
       let performanceScore = 100
       let diskScore = 100
       let memoryScore = 100
@@ -80,42 +159,63 @@ export async function POST(request: NextRequest) {
       let servicesScore = 100
       let securityScore = 100
 
-      if (isOnline) {
-        // Online device - generate realistic metrics
-        healthScore = Math.floor(Math.random() * 30) + 70 // 70-100
-        cpuUsage = Math.floor(Math.random() * 60) + 10 // 10-70%
-        memoryUsage = Math.floor(Math.random() * 50) + 20 // 20-70%
-        diskUsage = Math.floor(Math.random() * 40) + 30 // 30-70%
-        networkStatus = 'connected'
+      if (isOnline && latestHealthScan) {
+        // Calculate performance score based on CPU and memory usage
+        const avgUsage = (cpuUsage + memoryUsage) / 2
+        performanceScore = Math.max(0, 100 - Math.floor(avgUsage))
 
-        // Calculate individual scores based on usage
-        performanceScore = Math.max(0, 100 - Math.floor((cpuUsage + memoryUsage) / 2))
-        memoryScore = Math.max(0, 100 - memoryUsage)
-        diskScore = Math.max(0, 100 - diskUsage)
-        networkScore = 100 // Connected = good network
-        servicesScore = Math.floor(Math.random() * 20) + 80 // 80-100 (most services running)
-        securityScore = Math.floor(Math.random() * 30) + 70 // 70-100 (generally good security)
+        // Calculate memory score
+        memoryScore = Math.max(0, 100 - Math.floor(memoryUsage))
+
+        // Calculate disk score based on worst disk usage
+        if (diskHealth?.length > 0) {
+          const worstDiskUsage = Math.max(...diskHealth.map((disk: any) => disk.usage_percent || 0))
+          diskScore = Math.max(0, 100 - Math.floor(worstDiskUsage))
+        }
+
+        // Calculate network score
+        networkScore = networkHealth?.internet_connectivity ? 100 : 0
+
+        // Calculate services score based on running services
+        if (serviceHealth?.length > 0) {
+          const runningServices = serviceHealth.filter((service: any) => service.status === 'Running').length
+          const totalServices = serviceHealth.length
+          servicesScore = totalServices > 0 ? Math.floor((runningServices / totalServices) * 100) : 100
+        }
+
+        // Calculate security score based on security health
+        if (securityHealth) {
+          let securityPoints = 100
+          if (!securityHealth.uac_enabled) securityPoints -= 20
+          if (securityHealth.security_updates_available > 10) securityPoints -= 15
+          if (securityHealth.windows_defender_status === 'Disabled') securityPoints -= 30
+          if (securityHealth.firewall_status === 'Disabled') securityPoints -= 25
+          securityScore = Math.max(0, securityPoints)
+        }
       } else {
-        // Offline device - all metrics are 0 or low
-        healthScore = Math.floor(Math.random() * 20) + 30 // 30-50
-        cpuUsage = 0
-        memoryUsage = 0
-        diskUsage = 0
-        networkStatus = 'disconnected'
-
-        // Offline device scores
-        performanceScore = Math.floor(Math.random() * 20) + 30 // 30-50
-        memoryScore = Math.floor(Math.random() * 20) + 30 // 30-50
-        diskScore = Math.floor(Math.random() * 20) + 30 // 30-50
-        networkScore = 0 // Disconnected = no network
-        servicesScore = Math.floor(Math.random() * 20) + 30 // 30-50
-        securityScore = Math.floor(Math.random() * 20) + 30 // 30-50
+        // Offline device - lower scores
+        performanceScore = 30
+        memoryScore = 30
+        diskScore = 30
+        networkScore = 0
+        servicesScore = 30
+        securityScore = 30
       }
+
+      // Calculate overall health score as weighted average
+      const overallHealthScore = Math.floor(
+        (performanceScore * 0.25) +
+        (diskScore * 0.20) +
+        (memoryScore * 0.20) +
+        (networkScore * 0.15) +
+        (servicesScore * 0.15) +
+        (securityScore * 0.05)
+      )
 
       const result = {
         device_id: device.device_id,
         timestamp: device.last_seen || new Date().toISOString(),
-        health_score: healthScore,
+        health_score: overallHealthScore,
         cpu_usage: cpuUsage,
         memory_usage: memoryUsage,
         disk_usage: diskUsage,
@@ -126,21 +226,32 @@ export async function POST(request: NextRequest) {
         memory_score: memoryScore,
         network_score: networkScore,
         services_score: servicesScore,
-        security_score: securityScore
+        security_score: securityScore,
+        // Additional real data
+        performance_metrics: performanceMetrics,
+        disk_health: diskHealth,
+        memory_health: memoryHealth,
+        network_health: networkHealth,
+        service_health: serviceHealth,
+        security_health: securityHealth
       }
       
-      console.log(`Device ${device.device_id} metrics:`, {
-        health_score: healthScore,
+      console.log(`Device ${device.device_id} real metrics:`, {
+        health_score: overallHealthScore,
         performance_score: performanceScore,
         disk_score: diskScore,
         memory_score: memoryScore,
         network_score: networkScore,
         services_score: servicesScore,
-        security_score: securityScore
+        security_score: securityScore,
+        cpu_usage: cpuUsage,
+        memory_usage: memoryUsage,
+        disk_usage: diskUsage,
+        network_status: networkStatus
       })
       
       return result
-    })
+    }))
 
     return NextResponse.json({
       success: true,
